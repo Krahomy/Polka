@@ -1,21 +1,31 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
-import { addNewBook } from '../components/bookData';
+import { useBooksContext } from '../context/BooksContext';
 
 export default function AddBookPage() {
   const navigate = useNavigate();
+  const { addBook } = useBooksContext();
   const [title, setTitle] = useState('');
   const [author, setAuthor] = useState('');
+  const [saving, setSaving] = useState(false);
 
   const canSave = title.trim().length > 0;
 
-  const handleSave = () => {
-    if (!canSave) return;
-    addNewBook(title.trim(), author.trim());
-    toast.success('Книга добавлена!');
-    navigate('/search');
+  const handleSave = async () => {
+    if (!canSave || saving) return;
+    setSaving(true);
+    try {
+      await addBook(title.trim(), author.trim());
+      toast.success('Книга добавлена!');
+      navigate('/search');
+    } catch (e) {
+      console.error(e);
+      toast.error('Не удалось добавить книгу');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -80,10 +90,10 @@ export default function AddBookPage() {
           {/* Save button */}
           <button
             onClick={handleSave}
-            disabled={!canSave}
+            disabled={!canSave || saving}
             className={`w-full py-3 rounded-xl text-sm font-medium transition-colors ${
               canSave
-                ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                ? 'bg-blue-600 hover:bg-blue-700 text-white cursor-pointer'
                 : 'bg-gray-200 text-gray-400 cursor-not-allowed'
             }`}
           >

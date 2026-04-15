@@ -1,14 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Settings } from 'lucide-react';
-import { toast } from 'sonner';
 import { useNavigate } from 'react-router';
-import { Book, loadBooks, loadShadowOpacity, loadShelfImage, loadDefaultShelfImage, STORAGE_KEY_BOOKS, STORAGE_KEY_SETTINGS } from './bookData';
+import { loadShadowOpacity, loadShelfImage, loadDefaultShelfImage, STORAGE_KEY_SETTINGS } from './bookData';
+import { useBooksContext } from '../context/BooksContext';
 
 export function Shelf() {
   const navigate = useNavigate();
+  const { books } = useBooksContext();
 
-  const [books, setBooks] = useState<Book[]>(() => loadBooks());
   const [shadowOpacity, setShadowOpacity] = useState<number>(() => loadShadowOpacity());
   const [customShelfImage, setCustomShelfImage] = useState<string | null>(() => loadShelfImage());
   const [defaultShelfImage, setDefaultShelfImage] = useState<string | null>(() => loadDefaultShelfImage());
@@ -161,12 +161,8 @@ export function Shelf() {
   }, [books.length]);
 
   useEffect(() => {
-    const handleBooksUpdated = () => {
+    const handleSettingsUpdated = () => {
       try {
-        const savedBooks = localStorage.getItem(STORAGE_KEY_BOOKS);
-        if (savedBooks) {
-          setBooks(JSON.parse(savedBooks) as Book[]);
-        }
         const savedSettings = localStorage.getItem(STORAGE_KEY_SETTINGS);
         if (savedSettings) {
           const settings = JSON.parse(savedSettings);
@@ -181,12 +177,12 @@ export function Shelf() {
           }
         }
       } catch (e) {
-        console.error("Failed to reload books", e);
+        console.error("Failed to reload settings", e);
       }
     };
 
-    window.addEventListener('books-updated', handleBooksUpdated);
-    return () => window.removeEventListener('books-updated', handleBooksUpdated);
+    window.addEventListener('books-updated', handleSettingsUpdated);
+    return () => window.removeEventListener('books-updated', handleSettingsUpdated);
   }, []);
 
   const getBookHeightPixels = (heightClass: string) => {

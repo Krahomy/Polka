@@ -19,7 +19,6 @@ export interface Book {
   finishedAt?: number;
 }
 
-export const STORAGE_KEY_BOOKS = 'shelf-books';
 export const STORAGE_KEY_SETTINGS = 'shelf-settings';
 
 export const defaultBooks: Book[] = [
@@ -45,44 +44,6 @@ export const defaultBooks: Book[] = [
   { id: 20, height: 'h-52', width: 'w-9', title: 'Портрет Дориана Грея', author: 'Оскар Уайльд', spineColor: 'bg-[#831843]', tilt: -2, status: 'To Read' },
 ];
 
-/**
- * Load books from localStorage.
- * On first load (nothing saved), uses defaults.
- * Once saved, uses ONLY saved data (no merge) so deletions persist.
- */
-export function loadBooks(): Book[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY_BOOKS);
-    if (raw) {
-      const saved = JSON.parse(raw) as Book[];
-      return saved;
-    }
-  } catch (e) {
-    console.error('Failed to load books from localStorage', e);
-  }
-
-  persistBooksQuietly(defaultBooks);
-  return [...defaultBooks];
-}
-
-function persistBooksQuietly(books: Book[]): void {
-  try {
-    localStorage.setItem(STORAGE_KEY_BOOKS, JSON.stringify(books));
-  } catch (e) {
-    console.error('Failed to persist books to localStorage', e);
-  }
-}
-
-export function saveBooks(books: Book[]): boolean {
-  try {
-    localStorage.setItem(STORAGE_KEY_BOOKS, JSON.stringify(books));
-    window.dispatchEvent(new Event('books-updated'));
-    return true;
-  } catch (e) {
-    console.error('Failed to save books to localStorage', e);
-    return false;
-  }
-}
 
 export function loadShadowOpacity(): number {
   try {
@@ -164,29 +125,3 @@ export function saveDefaultShelfImage(imageBase64: string | null): void {
   }
 }
 
-const SPINE_COLORS = [
-  'bg-[#3b3b3b]', 'bg-[#1e293b]', 'bg-[#92400e]', 'bg-[#4b5563]',
-  'bg-[#d97706]', 'bg-[#57534e]', 'bg-[#1f2937]', 'bg-[#a16207]',
-  'bg-[#14532d]', 'bg-[#ef4444]', 'bg-[#9ca3af]', 'bg-[#e5e1db]',
-];
-
-const HEIGHT_OPTIONS = ['h-48', 'h-50', 'h-52', 'h-54', 'h-56'];
-const WIDTH_OPTIONS = ['w-8', 'w-9', 'w-10'];
-
-export function addNewBook(title: string, author: string): Book {
-  const books = loadBooks();
-  const maxId = books.reduce((max, b) => Math.max(max, b.id), 0);
-  const newBook: Book = {
-    id: maxId + 1,
-    title,
-    author,
-    height: HEIGHT_OPTIONS[Math.floor(Math.random() * HEIGHT_OPTIONS.length)],
-    width: WIDTH_OPTIONS[Math.floor(Math.random() * WIDTH_OPTIONS.length)],
-    spineColor: SPINE_COLORS[Math.floor(Math.random() * SPINE_COLORS.length)],
-    tilt: 0,
-    status: 'To Read',
-  };
-  const updated = [...books, newBook];
-  saveBooks(updated);
-  return newBook;
-}

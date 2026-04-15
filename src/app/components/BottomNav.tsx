@@ -1,4 +1,3 @@
-import React from 'react';
 import { Home, Library, Plus, Heart, User } from 'lucide-react';
 import { useNavigate } from 'react-router';
 

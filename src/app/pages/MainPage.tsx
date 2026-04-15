@@ -1,4 +1,3 @@
-import React from 'react';
 import { Toaster } from 'sonner';
 import { Shelf } from '../components/Shelf';
 import { BookList } from '../components/BookList';

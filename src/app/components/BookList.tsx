@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useRef } from 'react';
 import { ChevronDown, Trash2 } from 'lucide-react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
-import { Book, loadBooks, saveBooks, STORAGE_KEY_BOOKS } from './bookData';
+import type { Book } from './bookData';
+import { useBooksContext } from '../context/BooksContext';
 
 const getStatusStyles = (status?: string) => {
   switch (status) {
@@ -16,73 +17,25 @@ const getStatusStyles = (status?: string) => {
 };
 
 export function BookList() {
-  const [books, setBooks] = useState<Book[]>(() => loadBooks());
+  const { books, updateBook, deleteBook } = useBooksContext();
   const [openDropdownId, setOpenDropdownId] = useState<number | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    const handleStorageChange = () => {
-      try {
-        const savedBooks = localStorage.getItem(STORAGE_KEY_BOOKS);
-        if (savedBooks) {
-          setBooks(JSON.parse(savedBooks) as Book[]);
-        }
-      } catch (e) {
-        console.error("Failed to load books", e);
-      }
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-    window.addEventListener('books-updated', handleStorageChange);
-
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('books-updated', handleStorageChange);
-    };
-  }, []);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setOpenDropdownId(null);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
-
-  const updateBookStatus = (bookId: number, newStatus: 'To Read' | 'Reading' | 'Finished') => {
-    const updatedBooks = books.map(book => {
-      if (book.id !== bookId) return book;
-      const updates: Partial<Book> = { status: newStatus };
-      if (newStatus === 'Finished') {
-        updates.finishedAt = book.status === 'Finished' && book.finishedAt
-          ? book.finishedAt
-          : Date.now();
-      } else {
-        updates.finishedAt = undefined;
-      }
-      return { ...book, ...updates };
-    });
-    setBooks(updatedBooks);
-
-    try {
-      localStorage.setItem(STORAGE_KEY_BOOKS, JSON.stringify(updatedBooks));
-      window.dispatchEvent(new Event('books-updated'));
-    } catch (e) {
-      console.error("Failed to save status change", e);
+  const updateBookStatus = (book: Book, newStatus: 'To Read' | 'Reading' | 'Finished') => {
+    const updates: Partial<Book> = { status: newStatus };
+    if (newStatus === 'Finished') {
+      updates.finishedAt = book.status === 'Finished' && book.finishedAt
+        ? book.finishedAt
+        : Date.now();
+    } else {
+      updates.finishedAt = undefined;
     }
-
+    updateBook(book.id, updates).catch(console.error);
     setOpenDropdownId(null);
   };
 
-  const deleteBook = (bookId: number) => {
-    const updatedBooks = books.filter(book => book.id !== bookId);
-    setBooks(updatedBooks);
-    saveBooks(updatedBooks);
+  const handleDelete = (bookId: number) => {
+    deleteBook(bookId).catch(console.error);
   };
 
   const booksWithInfo = books.filter(book => book.title || book.author);
@@ -141,7 +94,7 @@ export function BookList() {
                           key={status}
                           onClick={(e) => {
                             e.stopPropagation();
-                            updateBookStatus(book.id, status);
+                            updateBookStatus(book, status);
                           }}
                           className={`w-full text-left px-3 py-2 text-xs font-medium hover:bg-gray-50 transition-colors ${
                             book.status === status ? 'bg-gray-100' : ''
@@ -162,7 +115,7 @@ export function BookList() {
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                deleteBook(book.id);
+                handleDelete(book.id);
               }}
               className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors flex-shrink-0"
               aria-label="Delete book"

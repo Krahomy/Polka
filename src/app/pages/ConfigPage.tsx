@@ -1,14 +1,16 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion } from 'motion/react';
 import { X, Upload, Trash2, Shuffle, ArrowLeft, Settings, Save } from 'lucide-react';
 import { toast, Toaster } from 'sonner';
 import { useNavigate } from 'react-router';
-import { Book, loadBooks, saveBooks, loadShadowOpacity, saveShadowOpacity, loadShelfImage, saveShelfImage, saveDefaultShelfImage } from '../components/bookData';
+import type { Book } from '../components/bookData';
+import { loadShadowOpacity, saveShadowOpacity, loadShelfImage, saveShelfImage, saveDefaultShelfImage } from '../components/bookData';
+import { useBooksContext } from '../context/BooksContext';
 
 export default function ConfigPage() {
   const navigate = useNavigate();
+  const { books, updateBook: ctxUpdateBook } = useBooksContext();
 
-  const [books, setBooks] = useState<Book[]>(() => loadBooks());
   const [shadowOpacity, setShadowOpacity] = useState<number>(() => loadShadowOpacity());
   const [customShelfImage, setCustomShelfImage] = useState<string | null>(() => loadShelfImage());
   const [selectedBookId, setSelectedBookId] = useState<number | null>(null);
@@ -17,31 +19,24 @@ export default function ConfigPage() {
   const shelfInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    const success = saveBooks(books);
     saveShadowOpacity(shadowOpacity);
     saveShelfImage(customShelfImage);
-    if (!success) {
-      toast.error("Storage full! Cannot save changes. Try deleting some images.");
-    }
-  }, [books, shadowOpacity, customShelfImage]);
+  }, [shadowOpacity, customShelfImage]);
 
-  const updateBook = (id: number, updates: Partial<Book>) => {
-    setBooks((prevBooks) =>
-      prevBooks.map((book) => {
-        if (book.id !== id) return book;
-        if (updates.status !== undefined) {
-          if (updates.status === 'Finished') {
-            updates.finishedAt = book.status === 'Finished' && book.finishedAt
-              ? book.finishedAt
-              : Date.now();
-          } else {
-            updates.finishedAt = undefined;
-          }
-        }
-        return { ...book, ...updates };
-      })
-    );
-  };
+  const updateBook = useCallback((id: number, updates: Partial<Book>) => {
+    const book = books.find(b => b.id === id);
+    const finalUpdates = { ...updates };
+    if (finalUpdates.status !== undefined && book) {
+      if (finalUpdates.status === 'Finished') {
+        finalUpdates.finishedAt = book.status === 'Finished' && book.finishedAt
+          ? book.finishedAt
+          : Date.now();
+      } else {
+        finalUpdates.finishedAt = undefined;
+      }
+    }
+    ctxUpdateBook(id, finalUpdates).catch(console.error);
+  }, [books, ctxUpdateBook]);
 
   const resizeImage = (
     file: File,
@@ -115,10 +110,10 @@ export default function ConfigPage() {
   };
 
   const randomizeTilts = () => {
-    setBooks(prevBooks => prevBooks.map((book, i) => {
-      if (i === 0) return { ...book, tilt: 0 };
-      return { ...book, tilt: Math.floor(Math.random() * 9) - 4 };
-    }));
+    books.forEach((book, i) => {
+      const tilt = i === 0 ? 0 : Math.floor(Math.random() * 9) - 4;
+      ctxUpdateBook(book.id, { tilt }).catch(console.error);
+    });
     toast.success("Randomized book tilts!");
   };
 
