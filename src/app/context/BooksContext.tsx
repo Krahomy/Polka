@@ -20,7 +20,7 @@ const WIDTH_OPTIONS = ['w-8', 'w-9', 'w-10'];
 interface BooksContextValue {
   books: Book[];
   loading: boolean;
-  addBook: (title: string, author: string) => Promise<Book>;
+  addBook: (title: string, author: string, coverImage?: string) => Promise<Book>;
   updateBook: (id: number, updates: Partial<Book>) => Promise<void>;
   deleteBook: (id: number) => Promise<void>;
 }
@@ -60,11 +60,12 @@ export function BooksProvider({ children }: { children: React.ReactNode }) {
     return () => { cancelled = true; };
   }, [user?.id]);
 
-  async function addBook(title: string, author: string): Promise<Book> {
+  async function addBook(title: string, author: string, coverImage?: string): Promise<Book> {
     if (!user) throw new Error('Not authenticated');
     const newBook = await insertBook(user.id, {
       title,
       author,
+      coverImage,
       height: HEIGHT_OPTIONS[Math.floor(Math.random() * HEIGHT_OPTIONS.length)],
       width: WIDTH_OPTIONS[Math.floor(Math.random() * WIDTH_OPTIONS.length)],
       spineColor: SPINE_COLORS[Math.floor(Math.random() * SPINE_COLORS.length)],
