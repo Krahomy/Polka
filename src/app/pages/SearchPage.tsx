@@ -52,7 +52,7 @@ export default function SearchPage() {
   };
 
   const isAdded = (book: SearchResult) =>
-    addedIds.has(book.id) || addedTitles.has(book.title.toLowerCase());
+    addedIds.has(book.id) || (book.title ? addedTitles.has(book.title.toLowerCase()) : false);
 
   return (
     <div className="min-h-screen bg-[#fcfaf6] flex flex-col">
