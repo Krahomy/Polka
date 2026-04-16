@@ -21,7 +21,7 @@ export default function SearchPage() {
   const [hasSearched, setHasSearched] = useState(false);
   const [addedIds, setAddedIds] = useState<Set<number>>(new Set());
 
-  const addedTitles = new Set(books.map((b) => b.title.toLowerCase()));
+  const addedTitles = new Set(books.filter((b) => b.title).map((b) => b.title.toLowerCase()));
 
   const handleSearch = async () => {
     if (!query.trim()) return;
