@@ -10,6 +10,7 @@ interface SearchResult {
   title: string;
   author: string;
   coverUrl: string;
+  pages: number | null;
 }
 
 export default function SearchPage() {
@@ -43,7 +44,7 @@ export default function SearchPage() {
 
   const handleAdd = async (book: SearchResult) => {
     try {
-      await addBook(book.title, book.author, book.coverUrl);
+      await addBook(book.title, book.author, book.coverUrl, book.pages ?? undefined);
       setAddedIds((prev) => new Set(prev).add(book.id));
       toast.success('Книга добавлена');
     } catch {

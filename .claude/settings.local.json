@@ -1,7 +1,10 @@
 {
   "permissions": {
     "allow": [
-      "mcp__figma__get_design_context"
+      "mcp__figma__get_design_context",
+      "WebFetch(domain:www.litres.ru)",
+      "WebFetch(domain:api.litres.ru)",
+      "WebFetch(domain:cdn.litres.ru)"
     ]
   }
 }

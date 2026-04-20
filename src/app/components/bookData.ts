@@ -17,6 +17,7 @@ export interface Book {
   tilt?: number;
   status?: 'To Read' | 'Reading' | 'Finished';
   finishedAt?: number;
+  pages?: number;
 }
 
 export const STORAGE_KEY_SETTINGS = 'shelf-settings';

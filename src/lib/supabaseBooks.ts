@@ -14,6 +14,7 @@ type DbBook = {
   tilt: number | null;
   status: string | null;
   finished_at: number | null;
+  pages: number | null;
 };
 
 function dbToBook(db: DbBook): Book {
@@ -29,6 +30,7 @@ function dbToBook(db: DbBook): Book {
     tilt: db.tilt ?? 0,
     status: db.status as Book['status'],
     finishedAt: db.finished_at ?? undefined,
+    pages: db.pages ?? undefined,
   };
 }
 
@@ -57,6 +59,7 @@ export async function insertBook(userId: string, book: Omit<Book, 'id'>): Promis
       tilt: book.tilt ?? 0,
       status: book.status ?? 'To Read',
       finished_at: book.finishedAt ?? null,
+      pages: book.pages ?? null,
     })
     .select()
     .single();
@@ -76,6 +79,7 @@ export async function updateBook(id: number, updates: Partial<Book>): Promise<vo
   if ('tilt' in updates) dbUpdates.tilt = updates.tilt ?? null;
   if ('status' in updates) dbUpdates.status = updates.status ?? null;
   if ('finishedAt' in updates) dbUpdates.finished_at = updates.finishedAt ?? null;
+  if ('pages' in updates) dbUpdates.pages = updates.pages ?? null;
 
   const { error } = await supabase.from('books').update(dbUpdates).eq('id', id);
   if (error) throw error;
