@@ -62,7 +62,7 @@ export async function extractColor(url: string): Promise<RGB | null> {
 }
 
 export function applyNoise(ctx: CanvasRenderingContext2D, w: number, h: number): void {
-  if (NOISE_STRENGTH === 0) return;
+
   const imageData = ctx.createImageData(w, h);
   const data = imageData.data;
   for (let i = 0; i < data.length; i += 4) {
