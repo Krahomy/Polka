@@ -10,11 +10,18 @@ export default function MainPage() {
       <section className="bg-[#fcfaf6]">
         {/* Title above shelf */}
         <div className="text-center pt-3 pb-4 bg-[#fff8ef]">
-          <h1 className="text-gray-800 font-[Open_Sans] text-[22px] inline-block">
-            <span className="bg-[linear-gradient(transparent_75%,#feaea2_75%,#feaea2_90%,transparent_90%)] px-1">
+          <div className="inline-block">
+            <h1 className="text-gray-800 font-[Open_Sans] text-[22px]">
               Прочитал в этом году
-            </span>
-          </h1>
+            </h1>
+            <img
+              src="/underline-stroke.svg"
+              alt=""
+              aria-hidden="true"
+              className="block mx-auto -mt-1"
+              style={{ width: '100%', maxWidth: '220px', height: 'auto', opacity: 0.75 }}
+            />
+          </div>
         </div>
         {/* Shelf Component */}
         <Shelf />

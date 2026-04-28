@@ -4,6 +4,8 @@ import { router } from './routes';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { BooksProvider } from './context/BooksContext';
 import AuthPage from './pages/AuthPage';
+import SpineSymbols from './components/SpineSymbols';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 function AppContent() {
   const { session, loading } = useAuth();
@@ -22,6 +24,7 @@ function AppContent() {
 
   return (
     <BooksProvider>
+      <SpineSymbols />
       <RouterProvider router={router} />
     </BooksProvider>
   );
@@ -29,9 +32,11 @@ function AppContent() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <Toaster position="top-center" />
-      <AppContent />
-    </AuthProvider>
+    <ErrorBoundary>
+      <AuthProvider>
+        <Toaster position="top-center" />
+        <AppContent />
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }

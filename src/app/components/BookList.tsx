@@ -16,7 +16,12 @@ const getStatusStyles = (status?: string) => {
   }
 };
 
-export function BookList() {
+interface BookListProps {
+  title?: string;
+  filter?: 'active' | 'finished';
+}
+
+export function BookList({ title = 'Хочу прочитать', filter = 'active' }: BookListProps) {
   const { books, updateBook, deleteBook } = useBooksContext();
   const [openDropdownId, setOpenDropdownId] = useState<number | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -38,12 +43,26 @@ export function BookList() {
     deleteBook(bookId).catch(console.error);
   };
 
-  const booksWithInfo = books.filter(book => book.title || book.author);
+  const booksWithInfo = books.filter(book =>
+    (book.title || book.author) &&
+    (filter === 'finished' ? book.status === 'Finished' : book.status !== 'Finished')
+  );
   const statusOptions: Array<'To Read' | 'Reading' | 'Finished'> = ['To Read', 'Reading', 'Finished'];
 
   return (
     <div className="px-4 pb-24 bg-[#fff8ef]">
-      <h2 className="text-center py-6 text-gray-900 border-b border-gray-200/60 font-[Open_Sans] text-[24px]">Прочитал в этом году</h2>
+      <div className="text-center pt-6 pb-5 border-b border-gray-200/60">
+        <div className="inline-block">
+          <h2 className="text-gray-900 font-[Open_Sans] text-[22px]">{title}</h2>
+          <img
+            src="/underline-stroke-2.svg"
+            alt=""
+            aria-hidden="true"
+            className="block mx-auto -mt-1"
+            style={{ width: '100%', maxWidth: '190px', height: 'auto', opacity: 0.75 }}
+          />
+        </div>
+      </div>
       <ul className="divide-y divide-gray-200/60">
         {booksWithInfo.map((book) => (
           <li
@@ -126,7 +145,9 @@ export function BookList() {
         ))}
         {booksWithInfo.length === 0 && (
           <li className="py-8 text-center text-gray-400 text-sm">
-            No books with titles yet. Add titles to books using the config menu!
+            {filter === 'finished'
+              ? 'Здесь появятся книги, которые ты прочитал/а. Но ты пока ничего не прочитал/а 😊'
+              : 'No books with titles yet. Add titles to books using the config menu!'}
           </li>
         )}
       </ul>

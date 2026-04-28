@@ -1,9 +1,11 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useReducer } from 'react';
 import { motion } from 'motion/react';
 import { Settings } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { loadShadowOpacity, loadShelfImage, loadDefaultShelfImage, STORAGE_KEY_SETTINGS } from './bookData';
 import { useBooksContext } from '../context/BooksContext';
+import { buildSpineSVG, spineWidth, titleToRgb, applyColorSettings } from '../../lib/spineGenerator';
+import { extractColor, applyNoise } from '../../lib/colorExtractor';
 
 export function Shelf() {
   const navigate = useNavigate();
@@ -14,6 +16,9 @@ export function Shelf() {
   const [defaultShelfImage, setDefaultShelfImage] = useState<string | null>(() => loadDefaultShelfImage());
   const [touchedBookId, setTouchedBookId] = useState<number | null>(null);
   const [isScrolling, setIsScrolling] = useState(false);
+
+  const colorCacheRef = useRef<Map<number, [number, number, number]>>(new Map());
+  const [, forceUpdate] = useReducer((x: number) => x + 1, 0);
 
   const isScrollingRef = useRef(false);
   const lastScrollLeftRef = useRef(0);
@@ -190,16 +195,23 @@ export function Shelf() {
     return numericPart * 4;
   };
 
-  const getBookWidthPixels = (widthClass: string) => {
-    const numericPart = parseInt(widthClass.replace('w-', ''));
-    return numericPart * 4;
-  };
-
   const finishedBooks = books.filter((book) => book.status === 'Finished')
     .sort((a, b) => (a.finishedAt ?? 0) - (b.finishedAt ?? 0));
 
+  useEffect(() => {
+    finishedBooks.forEach(book => {
+      if (colorCacheRef.current.has(book.id)) return;
+      colorCacheRef.current.set(book.id, titleToRgb(book.title));
+      if (book.coverImage) {
+        extractColor(book.coverImage).then(rgb => {
+          if (rgb) { colorCacheRef.current.set(book.id, rgb); forceUpdate(); }
+        });
+      }
+    });
+  }, [finishedBooks]);
+
   const totalBooksWidth = finishedBooks.reduce((acc, book) => {
-    const widthPx = getBookWidthPixels(book.width);
+    const widthPx = spineWidth(book.pages);
     const heightPx = getBookHeightPixels(book.height);
     const tilt = book.tilt || 0;
     const offset = Math.abs(Math.sin((tilt * Math.PI) / 180) * heightPx);
@@ -208,6 +220,23 @@ export function Shelf() {
 
   const bufferSpace = 100;
   const shelfWidth = totalBooksWidth + bufferSpace;
+
+  // Effective tilts: adjacent books must not lean the same way.
+  // When conflict detected, choose between 0 and opposite direction deterministically by book.id.
+  const effectiveTilts: number[] = [];
+  for (let i = 0; i < finishedBooks.length; i++) {
+    const raw = finishedBooks[i].tilt || 0;
+    let effective = raw;
+    if (i > 0) {
+      const prev = effectiveTilts[i - 1];
+      if ((prev > 0 && raw > 0) || (prev < 0 && raw < 0)) {
+        // Conflict: use book.id hash to pick between 0 (straight) or opposite
+        const h = (finishedBooks[i].id * 1234567891) >>> 0;
+        effective = (h & 1) === 0 ? 0 : -raw;
+      }
+    }
+    effectiveTilts.push(effective);
+  }
 
   return (
     <div className="relative w-full pt-12 shadow-sm bg-[#fff8ef]">
@@ -247,11 +276,11 @@ export function Shelf() {
         >
           {finishedBooks.map((book, index) => {
             const isLastBook = index === finishedBooks.length - 1;
-            const rawTilt = book.tilt || 0;
+            const rawTilt = effectiveTilts[index];
             const tilt = isLastBook && rawTilt > 0 ? 0 : rawTilt;
 
             const heightPx = getBookHeightPixels(book.height);
-            const widthPx = getBookWidthPixels(book.width);
+            const widthPx  = spineWidth(book.pages);
             const offset = Math.abs(Math.sin((tilt * Math.PI) / 180) * heightPx);
             const marginLeft = tilt < 0 ? offset : 0;
             const marginRight = tilt > 0 ? offset : 0;
@@ -266,22 +295,26 @@ export function Shelf() {
             const isTouched = touchedBookId === book.id;
             const shouldAnimate = !isScrolling && isTouched;
 
+            const rawRgb = colorCacheRef.current.get(book.id) ?? titleToRgb(book.title);
+            const rgb    = applyColorSettings(...rawRgb);
+            const svgStr = buildSpineSVG(book, rgb, heightPx);
+
             return (
               <motion.div
                 key={book.id}
                 data-book-id={book.id}
                 onMouseEnter={!isScrolling ? playClickSound : undefined}
                 onTouchStart={() => handleTouchStart(book.id)}
-                className={`relative rounded-sm group ${book.height} ${book.width} ${book.spineColor} cursor-pointer`}
+                className="relative rounded-sm group cursor-pointer overflow-hidden"
                 style={{
-                  backgroundImage: book.spineImage ? `url(${book.spineImage})` : undefined,
-                  backgroundSize: 'cover',
-                  backgroundPosition: 'center',
+                  width: widthPx,
+                  height: heightPx,
                   marginLeft: marginLeft,
                   marginRight: marginRight,
                   transformOrigin: 'bottom center',
                   pointerEvents: isScrolling ? 'none' : 'auto',
                   touchAction: 'pan-x',
+                  flexShrink: 0,
                 }}
                 initial={{ rotate: `${tilt}deg` }}
                 whileHover={!isScrolling && !isTouchDeviceRef.current ? {
@@ -311,31 +344,23 @@ export function Shelf() {
                 }}
                 transition={{ type: "spring", stiffness: 300, damping: 20 }}
               >
-                {book.spineImage && <div className="absolute inset-0 bg-black/10 mix-blend-multiply pointer-events-none"></div>}
+                {/* Generated SVG spine */}
+                <div
+                  dangerouslySetInnerHTML={{ __html: svgStr }}
+                  style={{ width: '100%', height: '100%', display: 'block' }}
+                />
 
-                <div className="absolute inset-y-0 left-0.5 w-[1px] bg-white/10 mix-blend-overlay pointer-events-none"></div>
-
-                {book.title && !book.spineImage && (
-                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <span
-                      className="text-[9px] font-serif tracking-wider uppercase"
-                      style={{
-                        color: 'rgba(255,255,255,0.9)',
-                        writingMode: 'vertical-lr',
-                        transform: 'rotate(180deg)',
-                        maxHeight: `${heightPx * 0.85}px`,
-                        textShadow: '0 1px 2px rgba(0,0,0,0.5)',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      {book.title}
-                    </span>
-                  </div>
-                )}
-
-                <div className="absolute -top-1 left-0 right-0 h-1 bg-white/20 rounded-t-sm pointer-events-none"></div>
+                {/* Paper noise canvas overlay */}
+                <canvas
+                  ref={(canvas) => {
+                    if (!canvas) return;
+                    canvas.width  = widthPx;
+                    canvas.height = heightPx;
+                    const ctx = canvas.getContext('2d');
+                    if (ctx) applyNoise(ctx, widthPx, heightPx);
+                  }}
+                  style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none' }}
+                />
 
                 {/* Base contact shadow on the shelf */}
                 <div
@@ -359,14 +384,10 @@ export function Shelf() {
         <div
           className="absolute inset-0 w-full h-full"
           style={{
-            backgroundImage: customShelfImage
-              ? `url(${customShelfImage})`
-              : defaultShelfImage
-                ? `url(${defaultShelfImage})`
-                : undefined,
-            backgroundColor: customShelfImage || defaultShelfImage ? undefined : '#8B6F47',
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
+            backgroundImage: `url(${customShelfImage ?? defaultShelfImage ?? '/shelf-wood.jpg'})`,
+            backgroundSize: 'auto 100%',
+            backgroundRepeat: 'repeat-x',
+            backgroundPosition: 'left center',
           }}
         >
           <div className="absolute top-0 left-0 right-0 h-[1px] bg-white/30"></div>
@@ -374,14 +395,7 @@ export function Shelf() {
             className="absolute inset-0 border-t"
             style={{
               borderColor: 'rgba(255,255,255,0.15)',
-              backgroundImage: customShelfImage
-                ? `linear-gradient(to bottom, rgba(255,255,255,0.05), rgba(0,0,0,0.08)), url(${customShelfImage})`
-                : defaultShelfImage
-                  ? `linear-gradient(to bottom, rgba(255,255,255,0.05), rgba(0,0,0,0.08)), url(${defaultShelfImage})`
-                  : 'linear-gradient(to bottom, rgba(255,255,255,0.05), rgba(0,0,0,0.08))',
-              backgroundSize: 'auto',
-              backgroundPosition: 'center',
-              backgroundRepeat: 'repeat',
+              background: 'linear-gradient(to bottom, rgba(255,255,255,0.05), rgba(0,0,0,0.08))',
             }}
           ></div>
         </div>
