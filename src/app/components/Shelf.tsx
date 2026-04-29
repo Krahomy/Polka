@@ -275,9 +275,10 @@ export function Shelf() {
           }}
         >
           {finishedBooks.map((book, index) => {
+            const isFirstBook = index === 0;
             const isLastBook = index === finishedBooks.length - 1;
             const rawTilt = effectiveTilts[index];
-            const tilt = isLastBook && rawTilt > 0 ? 0 : rawTilt;
+            const tilt = isFirstBook ? 0 : isLastBook && rawTilt > 0 ? 0 : rawTilt;
 
             const heightPx = getBookHeightPixels(book.height);
             const widthPx  = spineWidth(book.pages);
