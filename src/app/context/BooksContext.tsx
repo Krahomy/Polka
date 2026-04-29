@@ -70,7 +70,7 @@ export function BooksProvider({ children }: { children: React.ReactNode }) {
       height: HEIGHT_OPTIONS[Math.floor(Math.random() * HEIGHT_OPTIONS.length)],
       width: WIDTH_OPTIONS[Math.floor(Math.random() * WIDTH_OPTIONS.length)],
       spineColor: SPINE_COLORS[Math.floor(Math.random() * SPINE_COLORS.length)],
-      tilt: 0,
+      tilt: Math.floor(Math.random() * 9) - 4,
       status: 'To Read',
     });
     setBooks(prev => [...prev, newBook]);
