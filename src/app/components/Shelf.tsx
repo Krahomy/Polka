@@ -255,7 +255,7 @@ export function Shelf() {
       {/* Books Container */}
       <div
         ref={scrollContainerRef}
-        className="overflow-x-auto mb-[-6px] z-10 relative min-h-[250px]"
+        className="overflow-x-auto mb-[-6px] z-10 relative min-h-[285px]"
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         onTouchCancel={handleTouchEnd}
@@ -267,7 +267,7 @@ export function Shelf() {
         }}
       >
         <div
-          className="flex items-end justify-start space-x-[2px] perspective-[1000px] min-h-[250px] pl-4"
+          className="flex items-end justify-start space-x-[2px] perspective-[1000px] min-h-[285px] pl-4"
           style={{
             width: `${shelfWidth}px`,
             minWidth: '100%',
