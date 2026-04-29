@@ -316,6 +316,7 @@ export function Shelf() {
                   pointerEvents: isScrolling ? 'none' : 'auto',
                   touchAction: 'pan-x',
                   flexShrink: 0,
+                  backgroundColor: `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`,
                 }}
                 initial={{ rotate: `${tilt}deg` }}
                 whileHover={!isScrolling && !isTouchDeviceRef.current ? {
