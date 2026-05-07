@@ -239,7 +239,7 @@ export function Shelf() {
   }
 
   return (
-    <div className="relative w-full pt-12 shadow-sm bg-[#fff8ef]">
+    <div className="relative w-full pt-12 shadow-sm bg-[#f8f8f8]">
 
       {/* Configuration Button */}
       <div className="absolute top-2 right-2 z-50">
@@ -255,7 +255,7 @@ export function Shelf() {
       {/* Books Container */}
       <div
         ref={scrollContainerRef}
-        className="overflow-x-auto mb-[-6px] z-10 relative min-h-[285px]"
+        className="overflow-x-auto z-10 relative min-h-[285px]"
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         onTouchCancel={handleTouchEnd}
@@ -312,7 +312,7 @@ export function Shelf() {
                   height: heightPx,
                   marginLeft: marginLeft,
                   marginRight: marginRight,
-                  transformOrigin: 'bottom center',
+                  transformOrigin: tilt > 0 ? 'bottom left' : tilt < 0 ? 'bottom right' : 'bottom center',
                   pointerEvents: isScrolling ? 'none' : 'auto',
                   touchAction: 'pan-x',
                   flexShrink: 0,

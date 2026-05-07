@@ -50,7 +50,7 @@ export function BookList({ title = 'Хочу прочитать', filter = 'acti
   const statusOptions: Array<'To Read' | 'Reading' | 'Finished'> = ['To Read', 'Reading', 'Finished'];
 
   return (
-    <div className="px-4 pb-24 bg-[#fff8ef]">
+    <div className="px-4 pb-24 bg-[#f8f8f8]">
       <div className="text-center pt-6 pb-5 border-b border-gray-200/60">
         <div className="inline-block">
           <h2 className="text-gray-900 font-[Open_Sans] text-[22px]">{title}</h2>

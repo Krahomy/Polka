@@ -5,11 +5,11 @@ import { BottomNav } from '../components/BottomNav';
 
 export default function MainPage() {
   return (
-    <div className="min-h-screen bg-[#fcfaf6] text-gray-900 font-sans pb-24">
+    <div className="min-h-screen bg-[#F8F8F8] text-gray-900 font-sans pb-24">
       <Toaster position="top-center" />
-      <section className="bg-[#fcfaf6]">
+      <section className="bg-[#F8F8F8]">
         {/* Title above shelf */}
-        <div className="text-center pt-3 pb-4 bg-[#fff8ef]">
+        <div className="text-center pt-3 pb-4 bg-[#F8F8F8]">
           <div className="inline-block">
             <h1 className="text-gray-800 font-[Open_Sans] text-[22px]">
               Прочитал в этом году
