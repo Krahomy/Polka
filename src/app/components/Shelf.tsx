@@ -4,12 +4,15 @@ import { Settings } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { loadShadowOpacity, loadShelfImage, loadDefaultShelfImage, STORAGE_KEY_SETTINGS } from './bookData';
 import { useBooksContext } from '../context/BooksContext';
+import { useAuth } from '../context/AuthContext';
 import { buildSpineSVG, spineWidth, titleToRgb, applyColorSettings } from '../../lib/spineGenerator';
 import { extractColor, applyNoise } from '../../lib/colorExtractor';
 
 export function Shelf() {
   const navigate = useNavigate();
   const { books } = useBooksContext();
+  const { user } = useAuth();
+  const isOwner = user?.email === 'anis@hey.com' || user?.email === 'anis.sherzodov@gmail.com';
 
   const [shadowOpacity, setShadowOpacity] = useState<number>(() => loadShadowOpacity());
   const [customShelfImage, setCustomShelfImage] = useState<string | null>(() => loadShelfImage());
@@ -242,15 +245,17 @@ export function Shelf() {
     <div className="relative w-full pt-12 shadow-sm bg-[#f8f8f8]">
 
       {/* Configuration Button */}
-      <div className="absolute top-2 right-2 z-50">
-        <button
-          onClick={() => navigate('/config')}
-          className="p-2 rounded-full shadow-sm transition-all border border-gray-200 bg-white/80 text-gray-600 hover:bg-blue-600 hover:text-white"
-          title="Open Technical Configuration"
-        >
-          <Settings className="w-4 h-4" />
-        </button>
-      </div>
+      {isOwner && (
+        <div className="absolute top-2 right-2 z-50">
+          <button
+            onClick={() => navigate('/config')}
+            className="p-2 rounded-full shadow-sm transition-all border border-gray-200 bg-white/80 text-gray-600 hover:bg-blue-600 hover:text-white"
+            title="Open Technical Configuration"
+          >
+            <Settings className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {/* Books Container */}
       <div
