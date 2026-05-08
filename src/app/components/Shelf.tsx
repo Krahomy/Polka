@@ -8,6 +8,28 @@ import { useAuth } from '../context/AuthContext';
 import { buildSpineSVG, spineWidth, titleToRgb, applyColorSettings } from '../../lib/spineGenerator';
 import { extractColor, applyNoise } from '../../lib/colorExtractor';
 
+const SPINE_COLOR_CACHE_KEY = 'spine-color-cache';
+
+function loadColorCache(): Map<number, [number, number, number]> {
+  try {
+    const raw = localStorage.getItem(SPINE_COLOR_CACHE_KEY);
+    if (raw) {
+      const obj = JSON.parse(raw) as Record<string, [number, number, number]>;
+      return new Map(Object.entries(obj).map(([k, v]) => [Number(k), v]));
+    }
+  } catch { /* ignore */ }
+  return new Map();
+}
+
+function persistColor(bookId: number, rgb: [number, number, number]) {
+  try {
+    const raw = localStorage.getItem(SPINE_COLOR_CACHE_KEY);
+    const obj = raw ? (JSON.parse(raw) as Record<string, unknown>) : {};
+    obj[bookId] = rgb;
+    localStorage.setItem(SPINE_COLOR_CACHE_KEY, JSON.stringify(obj));
+  } catch { /* ignore */ }
+}
+
 export function Shelf() {
   const navigate = useNavigate();
   const { books } = useBooksContext();
@@ -20,7 +42,7 @@ export function Shelf() {
   const [touchedBookId, setTouchedBookId] = useState<number | null>(null);
   const [isScrolling, setIsScrolling] = useState(false);
 
-  const colorCacheRef = useRef<Map<number, [number, number, number]>>(new Map());
+  const colorCacheRef = useRef<Map<number, [number, number, number]>>(loadColorCache());
   const [, forceUpdate] = useReducer((x: number) => x + 1, 0);
 
   const isScrollingRef = useRef(false);
@@ -207,7 +229,7 @@ export function Shelf() {
       colorCacheRef.current.set(book.id, titleToRgb(book.title));
       if (book.coverImage) {
         extractColor(book.coverImage).then(rgb => {
-          if (rgb) { colorCacheRef.current.set(book.id, rgb); forceUpdate(); }
+          if (rgb) { colorCacheRef.current.set(book.id, rgb); persistColor(book.id, rgb); forceUpdate(); }
         });
       }
     });
