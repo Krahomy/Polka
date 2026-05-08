@@ -3,6 +3,32 @@ import { ChevronDown, Trash2 } from 'lucide-react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import type { Book } from './bookData';
 import { useBooksContext } from '../context/BooksContext';
+import { titleToRgb } from '../../lib/spineGenerator';
+
+function CoverPlaceholder({ title }: { title: string }) {
+  const [r, g, b] = titleToRgb(title);
+  const luminance = r * 0.299 + g * 0.587 + b * 0.114;
+  const textColor = luminance > 140 ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.9)';
+  const darkEdge = `rgba(0,0,0,0.18)`;
+  const lightEdge = luminance > 140 ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.15)';
+
+  return (
+    <div
+      className="absolute inset-0 rounded-br-[12px] rounded-tr-[1px] flex flex-col items-center justify-center px-2 overflow-hidden select-none"
+      style={{
+        background: `linear-gradient(135deg, rgb(${Math.min(r+20,255)},${Math.min(g+20,255)},${Math.min(b+20,255)}) 0%, rgb(${r},${g},${b}) 50%, rgb(${Math.max(r-25,0)},${Math.max(g-25,0)},${Math.max(b-25,0)}) 100%)`,
+        boxShadow: `inset 3px 0 6px ${lightEdge}, inset -2px 0 4px ${darkEdge}`,
+      }}
+    >
+      <p
+        className="text-center text-[11px] font-semibold leading-tight break-words hyphens-auto"
+        style={{ color: textColor, maxHeight: '90%', overflow: 'hidden' }}
+      >
+        {title}
+      </p>
+    </div>
+  );
+}
 
 const getStatusStyles = (status?: string) => {
   switch (status) {
@@ -70,8 +96,8 @@ export function BookList({ title = 'Хочу прочитать', filter = 'acti
             className="group flex items-center gap-3 py-3 hover:bg-gray-50 transition-colors px-2 rounded-lg"
           >
             {/* Book Cover Image */}
-            <div className="w-28 h-40 flex-shrink-0 bg-gray-200 relative">
-              {book.coverImage && (
+            <div className="w-28 h-40 flex-shrink-0 relative">
+              {book.coverImage ? (
                 <div className="absolute inset-0 pointer-events-none rounded-br-[12px] rounded-tr-[12px]">
                   <ImageWithFallback
                     src={book.coverImage}
@@ -80,6 +106,8 @@ export function BookList({ title = 'Хочу прочитать', filter = 'acti
                   />
                   <div aria-hidden="true" className="absolute border-[#e2e3e3] border-b-4 border-l-4 border-solid inset-0 rounded-br-[12px] rounded-tr-[12px]" />
                 </div>
+              ) : (
+                <CoverPlaceholder title={book.title || '?'} />
               )}
             </div>
 
