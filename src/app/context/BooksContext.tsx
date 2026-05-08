@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useAuth } from './AuthContext';
 import type { Book } from '../components/bookData';
-import { defaultBooks } from '../components/bookData';
 import {
   fetchUserBooks,
   insertBook,
@@ -40,19 +39,7 @@ export function BooksProvider({ children }: { children: React.ReactNode }) {
     fetchUserBooks(user.id)
       .then(async (fetched) => {
         if (cancelled) return;
-        if (fetched.length === 0) {
-          // Seed default books for new users
-          const seeded: Book[] = [];
-          for (const book of defaultBooks) {
-            if (cancelled) return;
-            const { id: _id, ...rest } = book;
-            const inserted = await insertBook(user.id, rest);
-            seeded.push(inserted);
-          }
-          if (!cancelled) setBooks(seeded);
-        } else {
-          setBooks(fetched);
-        }
+        setBooks(fetched);
       })
       .catch(console.error)
       .finally(() => { if (!cancelled) setLoading(false); });
