@@ -12,6 +12,17 @@
     <meta name="apple-mobile-web-app-title" content="Polka" />
     <link rel="apple-touch-icon" href="/icon-192.png" />
     <meta name="theme-color" content="#F8F8F8" />
+    <script>
+      if (
+        window.matchMedia('(display-mode: standalone)').matches ||
+        window.navigator.standalone === true
+      ) {
+        document.querySelector('meta[name="viewport"]').setAttribute(
+          'content',
+          'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no'
+        );
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>
