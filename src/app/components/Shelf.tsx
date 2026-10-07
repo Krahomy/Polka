@@ -293,18 +293,13 @@ export function Shelf() {
           overflowY: 'hidden',
         }}
       >
-        {/* Books and board scroll together, so books don't slide over the shelf */}
         <div
-          className="relative"
+          className="flex items-end justify-start space-x-[2px] perspective-[1000px] min-h-[285px] pl-4"
           style={{
             width: `${shelfWidth}px`,
             minWidth: '100%',
             touchAction: 'pan-x',
           }}
-        >
-        <div
-          className="flex items-end justify-start space-x-[2px] perspective-[1000px] min-h-[285px] pl-4"
-          style={{ touchAction: 'pan-x' }}
         >
           {finishedBooks.map((book, index) => {
             const isFirstBook = index === 0;
@@ -409,9 +404,10 @@ export function Shelf() {
             );
           })}
         </div>
+      </div>
 
-        {/* Shelf Board */}
-        <div className="relative h-5 w-full z-20">
+      {/* Shelf Board */}
+      <div className="relative h-5 w-full shadow-xl z-20">
         <div
           className="absolute inset-0 w-full h-full"
           style={{
@@ -430,14 +426,8 @@ export function Shelf() {
             }}
           ></div>
         </div>
-        </div>
-        </div>
-      </div>
-
-      {/* Shadow under the shelf: static, outside the scroll area so it isn't clipped */}
-      <div className="relative h-0 w-full z-20">
         <div
-          className="absolute left-0 right-0 h-16 pointer-events-none -top-1"
+          className="absolute left-0 right-0 h-16 pointer-events-none top-[calc(100%-4px)]"
           style={{
             background: 'linear-gradient(to bottom, rgba(0,0,0,0.45), rgba(0,0,0,0))',
             filter: 'blur(6px)',

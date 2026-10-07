@@ -403,7 +403,7 @@ export function ShelfTest() {
         <div
           className="absolute inset-0 w-full h-full"
           style={{
-            backgroundImage: `url(${customShelfImage ?? defaultShelfImage ?? '/shelf-wood.jpg'})`,
+            backgroundImage: `url(${customShelfImage ?? defaultShelfImage ?? '/shelf-wood-seamless.jpg'})`,
             backgroundSize: 'auto 100%',
             backgroundRepeat: 'repeat-x',
             backgroundPosition: 'left center',
