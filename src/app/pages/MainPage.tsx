@@ -1,5 +1,6 @@
 import { Toaster } from 'sonner';
 import { Shelf } from '../components/Shelf';
+import { ShelfTest } from '../components/ShelfTest';
 import { BookList } from '../components/BookList';
 import { BottomNav } from '../components/BottomNav';
 
@@ -25,6 +26,14 @@ export default function MainPage() {
         </div>
         {/* Shelf Component */}
         <Shelf />
+
+        {/* Test shelf for design comparison (design branch only) */}
+        <div className="text-center pt-8 pb-4 bg-[#F8F8F8]">
+          <h2 className="text-gray-500 font-[Open_Sans] text-[16px]">
+            Тестовая полка
+          </h2>
+        </div>
+        <ShelfTest />
       </section>
 
       <main className="max-w-md mx-auto relative z-0">
