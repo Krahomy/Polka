@@ -301,6 +301,10 @@ export function ShelfTest() {
             const gapShadowOpacity = absTilt > 0 ? Math.min(shadowOpacity * 0.5 + absTilt * 0.05, 0.6) : 0;
             const gapOffsetX = tilt > 0 ? -absTilt * 0.8 : absTilt * 0.8;
 
+            // Shadow cast onto the wall behind the shelf (light from the upper left)
+            const wallShadow = `10px 4px 14px -2px rgba(0,0,0,${Math.min(shadowOpacity * 0.6, 0.35)})`;
+            const wallShadowLifted = `18px 12px 24px -4px rgba(0,0,0,${Math.min(shadowOpacity * 0.45, 0.28)})`;
+
             const isTouched = touchedBookId === book.id;
             const shouldAnimate = !isScrolling && isTouched;
 
@@ -331,20 +335,21 @@ export function ShelfTest() {
                   zIndex: 50,
                   y: -15,
                   rotate: "0deg",
-                  boxShadow: `0px 20px 30px -5px rgba(0,0,0,${Math.min(shadowOpacity + 0.2, 0.8)})`,
+                  boxShadow: `0px 20px 30px -5px rgba(0,0,0,${Math.min(shadowOpacity + 0.2, 0.8)}), ${wallShadowLifted}`,
                   transition: { type: "spring", stiffness: 300, damping: 20 }
                 } : undefined}
                 animate={shouldAnimate ? {
                   zIndex: 50,
                   y: -15,
                   rotate: "0deg",
-                  boxShadow: `0px 20px 30px -5px rgba(0,0,0,${Math.min(shadowOpacity + 0.2, 0.8)})`,
+                  boxShadow: `0px 20px 30px -5px rgba(0,0,0,${Math.min(shadowOpacity + 0.2, 0.8)}), ${wallShadowLifted}`,
                 } : {
                   rotate: `${tilt}deg`,
                   scale: 1,
                   zIndex: 1,
                   y: 0,
                   boxShadow: [
+                    wallShadow,
                     `${tilt > 0 ? -5 : 5}px 0px 15px -3px rgba(0,0,0,${shadowOpacity})`,
                     `0px ${baseShadowBlur * 0.5}px ${baseShadowBlur}px -${baseShadowSpread}px rgba(0,0,0,${baseShadowOpacity})`,
                     absTilt > 0 ? `${gapOffsetX}px ${gapShadowBlur * 0.4}px ${gapShadowBlur}px -2px rgba(0,0,0,${gapShadowOpacity})` : '',
