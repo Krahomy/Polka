@@ -490,7 +490,7 @@ export function ShelfTest() {
       )}
 
       {/* Shelf Board */}
-      <div className="relative h-5 w-full shadow-xl z-20">
+      <div className="relative h-6 w-full shadow-xl z-20">
         <div
           className="absolute inset-0 w-full h-full"
           style={{
