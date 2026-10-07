@@ -277,6 +277,8 @@ export function ShelfTest() {
         style={{
           // Scrollbar hidden; the shelf is scrolled by swiping
           scrollbarWidth: 'none',
+          // No rubber-band bounce at the left and right ends
+          overscrollBehaviorX: 'none',
           touchAction: 'pan-x',
           overflowY: 'hidden',
         }}
