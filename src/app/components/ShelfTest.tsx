@@ -236,6 +236,14 @@ export function ShelfTest() {
     container.scrollTo({ left: Math.max(prev.right - container.clientWidth + PAGE_EDGE_GAP, 0), behavior: 'smooth' });
   };
 
+  const finishedKey = books
+    .filter((book) => book.status === 'Finished')
+    .map((book) => book.id)
+    .join(',');
+  useEffect(() => {
+    updatePaging();
+  }, [finishedKey]);
+
   // Start from the first book; newer books that don't fit are reached with the arrow
   useEffect(() => {
     if (scrollContainerRef.current) {
@@ -244,9 +252,16 @@ export function ShelfTest() {
     updatePaging();
   }, [books.length]);
 
+  // Recalculate arrows whenever the row or the shelf changes size:
+  // a book marked as finished, a new book, a window resize
   useEffect(() => {
-    window.addEventListener('resize', updatePaging);
-    return () => window.removeEventListener('resize', updatePaging);
+    const container = scrollContainerRef.current;
+    const row = container?.firstElementChild;
+    if (!container || !row) return;
+    const observer = new ResizeObserver(() => updatePaging());
+    observer.observe(container);
+    observer.observe(row);
+    return () => observer.disconnect();
   }, []);
 
   useEffect(() => {
@@ -463,7 +478,7 @@ export function ShelfTest() {
           type="button"
           onClick={pageLeft}
           aria-label="Показать предыдущие книги"
-          className="absolute left-2 top-[190px] -translate-y-1/2 z-30 p-2 rounded-full bg-white/85 text-gray-700 shadow-md border border-gray-200 active:scale-95 transition-transform"
+          className="absolute left-2 bottom-[130px] translate-y-1/2 z-30 p-2 rounded-full bg-white/85 text-gray-700 shadow-md border border-gray-200 active:scale-95 transition-transform"
         >
           <ChevronLeft className="w-5 h-5" />
         </button>
@@ -473,7 +488,7 @@ export function ShelfTest() {
           type="button"
           onClick={pageRight}
           aria-label="Показать следующие книги"
-          className="absolute right-2 top-[190px] -translate-y-1/2 z-30 p-2 rounded-full bg-white/85 text-gray-700 shadow-md border border-gray-200 active:scale-95 transition-transform"
+          className="absolute right-2 bottom-[130px] translate-y-1/2 z-30 p-2 rounded-full bg-white/85 text-gray-700 shadow-md border border-gray-200 active:scale-95 transition-transform"
         >
           <ChevronRight className="w-5 h-5" />
         </button>
