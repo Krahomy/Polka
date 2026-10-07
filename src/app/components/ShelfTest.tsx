@@ -423,7 +423,7 @@ export function ShelfTest() {
       </div>
 
       {/* Shadow under the shelf: static, outside the scroll area so it isn't clipped */}
-      <div className="relative h-0 w-full z-0">
+      <div className="relative h-0 w-full z-20">
         <div
           className="absolute left-0 right-0 h-16 pointer-events-none -top-1"
           style={{
