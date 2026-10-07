@@ -33,7 +33,7 @@ Deno.serve(async (req) => {
         title: item.title,
         author: author ? author.full_name : '',
         coverUrl: `https://cdn.litres.ru${item.cover_url}`,
-        pages: symbolsCount > 0 ? Math.round(symbolsCount / 1800) : 300,
+        pages: symbolsCount > 0 ? Math.round(symbolsCount / 1500) : 300,
       };
     });
 
