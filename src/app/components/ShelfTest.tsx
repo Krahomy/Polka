@@ -7,9 +7,6 @@ import { extractColor, applyNoise } from '../../lib/colorExtractor';
 
 const SPINE_COLOR_CACHE_KEY = 'spine-color-cache';
 
-// Gap between the screen edge and the left end of the shelf (px)
-const SHELF_INSET = 14;
-
 function loadColorCache(): Map<number, [number, number, number]> {
   try {
     const raw = localStorage.getItem(SPINE_COLOR_CACHE_KEY);
@@ -271,10 +268,6 @@ export function ShelfTest() {
         onTouchEnd={handleTouchEnd}
         onTouchCancel={handleTouchEnd}
         style={{
-          marginLeft: SHELF_INSET,
-          // Books fade out softly where the shelf ends instead of being cut
-          maskImage: 'linear-gradient(to right, transparent 0, black 14px)',
-          WebkitMaskImage: 'linear-gradient(to right, transparent 0, black 14px)',
           scrollbarWidth: 'thin',
           scrollbarColor: 'rgba(139, 111, 71, 0.5) transparent',
           touchAction: 'pan-x',
@@ -400,9 +393,9 @@ export function ShelfTest() {
       </div>
 
       {/* Shelf Board */}
-      <div className="relative h-5 shadow-xl z-20 rounded-l-[3px]" style={{ marginLeft: SHELF_INSET }}>
+      <div className="relative h-5 w-full shadow-xl z-20">
         <div
-          className="absolute inset-0 w-full h-full rounded-l-[3px] overflow-hidden"
+          className="absolute inset-0 w-full h-full"
           style={{
             backgroundImage: `url(${customShelfImage ?? defaultShelfImage ?? '/shelf-wood.jpg'})`,
             backgroundSize: 'auto 100%',
@@ -416,14 +409,6 @@ export function ShelfTest() {
             style={{
               borderColor: 'rgba(255,255,255,0.15)',
               background: 'linear-gradient(to bottom, rgba(255,255,255,0.05), rgba(0,0,0,0.08))',
-            }}
-          ></div>
-          {/* Left end of the board: end-grain shading and a soft rounded edge */}
-          <div
-            className="absolute inset-y-0 left-0 w-[7px]"
-            style={{
-              background: 'linear-gradient(to right, rgba(0,0,0,0.28), rgba(0,0,0,0.08) 60%, rgba(0,0,0,0))',
-              boxShadow: 'inset 1px 0 0 rgba(255,255,255,0.25)',
             }}
           ></div>
         </div>
