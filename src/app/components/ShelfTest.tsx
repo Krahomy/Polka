@@ -17,6 +17,9 @@ const TEST_TILT_SCALE = 0.65;
 // Gap kept between a revealed book and the shelf edge after paging (px)
 const PAGE_EDGE_GAP = 16;
 
+// How far the books area extends over the board for contact shadows (px)
+const CONTACT_SHADOW_ROOM = 8;
+
 // Light wood texture for the board (alternative: '/shelf-wood-pine.jpg')
 const TEST_SHELF_IMAGE = '/shelf-wood-light.jpg';
 
@@ -338,7 +341,7 @@ export function ShelfTest() {
       {/* Books Container */}
       <div
         ref={scrollContainerRef}
-        className="overflow-hidden z-10 relative min-h-[285px]"
+        className="overflow-hidden z-30 relative min-h-[285px]"
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         onTouchCancel={handleTouchEnd}
@@ -347,6 +350,9 @@ export function ShelfTest() {
           overflowX: 'hidden',
           overflowY: 'hidden',
           touchAction: 'pan-y',
+          // Extend over the top of the board so book contact shadows can land on it
+          paddingBottom: CONTACT_SHADOW_ROOM,
+          marginBottom: -CONTACT_SHADOW_ROOM,
         }}
       >
         <div
@@ -393,7 +399,7 @@ export function ShelfTest() {
                 data-book-id={book.id}
                 onMouseEnter={!isScrolling ? playClickSound : undefined}
                 onTouchStart={() => handleTouchStart(book.id)}
-                className="relative rounded-[2px] group cursor-pointer overflow-hidden"
+                className="relative rounded-[2px] group cursor-pointer"
                 style={{
                   width: widthPx,
                   height: heightPx,
@@ -432,33 +438,37 @@ export function ShelfTest() {
                 }}
                 transition={{ type: "spring", stiffness: 300, damping: 20 }}
               >
-                {/* Generated SVG spine */}
-                <div
-                  dangerouslySetInnerHTML={{ __html: svgStr }}
-                  style={{ width: '100%', height: '100%', display: 'block' }}
-                />
+                {/* Spine artwork, clipped to the rounded corners */}
+                <div className="absolute inset-0 overflow-hidden rounded-[2px]">
+                  {/* Generated SVG spine */}
+                  <div
+                    dangerouslySetInnerHTML={{ __html: svgStr }}
+                    style={{ width: '100%', height: '100%', display: 'block' }}
+                  />
 
-                {/* Paper noise canvas overlay */}
-                <canvas
-                  ref={(canvas) => {
-                    if (!canvas) return;
-                    canvas.width  = widthPx;
-                    canvas.height = heightPx;
-                    const ctx = canvas.getContext('2d');
-                    if (ctx) applyNoise(ctx, widthPx, heightPx);
-                  }}
-                  style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none' }}
-                />
+                  {/* Paper noise canvas overlay */}
+                  <canvas
+                    ref={(canvas) => {
+                      if (!canvas) return;
+                      canvas.width  = widthPx;
+                      canvas.height = heightPx;
+                      const ctx = canvas.getContext('2d');
+                      if (ctx) applyNoise(ctx, widthPx, heightPx);
+                    }}
+                    style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none' }}
+                  />
+                </div>
 
-                {/* Base contact shadow on the shelf */}
+                {/* Contact shadow on the top edge of the board; fades out when the book is lifted */}
                 <div
-                  className="absolute bottom-0 left-1/2 -translate-x-1/2 pointer-events-none z-[-1]"
+                  className={`absolute pointer-events-none z-[-1] transition-opacity duration-200 group-hover:opacity-0 ${isTouched ? 'opacity-0' : ''}`}
                   style={{
-                    width: `${widthPx + 8 + absTilt * 2}px`,
-                    height: `${4 + absTilt * 1.5}px`,
-                    background: `radial-gradient(ellipse at center, rgba(0,0,0,${baseShadowOpacity * 0.8}) 0%, rgba(0,0,0,0) 70%)`,
-                    transform: `translateY(${2 + absTilt * 0.5}px)`,
-                    filter: `blur(${2 + absTilt}px)`,
+                    left: -3 - absTilt,
+                    right: -3 - absTilt,
+                    top: 'calc(100% - 2px)',
+                    height: 7,
+                    background: `radial-gradient(ellipse 50% 100% at 50% 0%, rgba(0,0,0,${Math.min(0.25 + shadowOpacity * 0.35, 0.55)}) 0%, rgba(0,0,0,0) 100%)`,
+                    filter: 'blur(1px)',
                   }}
                 />
               </motion.div>
@@ -490,7 +500,7 @@ export function ShelfTest() {
       )}
 
       {/* Shelf Board */}
-      <div className="relative h-6 w-full shadow-xl z-20">
+      <div className="relative h-6 w-full shadow-xl z-20 rounded-b-[2px]">
         <div
           className="absolute inset-0 w-full h-full"
           style={{
@@ -501,14 +511,15 @@ export function ShelfTest() {
             backgroundPosition: 'left center',
           }}
         >
-          <div className="absolute top-0 left-0 right-0 h-[1px] bg-white/30"></div>
+          {/* Bevel: light catches the rounded top edge, the face darkens toward the bottom */}
           <div
-            className="absolute inset-0 border-t"
+            className="absolute inset-0 rounded-b-[2px]"
             style={{
-              borderColor: 'rgba(255,255,255,0.15)',
-              background: 'linear-gradient(to bottom, rgba(255,255,255,0.05), rgba(0,0,0,0.08))',
+              background: 'linear-gradient(to bottom, rgba(255,255,255,0.6) 0px, rgba(255,255,255,0.2) 2px, rgba(255,255,255,0) 35%, rgba(0,0,0,0.06) 65%, rgba(0,0,0,0.22) 100%)',
             }}
           ></div>
+          {/* Thin dark line along the bottom edge */}
+          <div className="absolute bottom-0 left-0 right-0 h-[1px] bg-black/30"></div>
         </div>
         <div
           className="absolute left-0 right-0 h-16 pointer-events-none top-[calc(100%-4px)]"
