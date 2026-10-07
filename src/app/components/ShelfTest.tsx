@@ -324,7 +324,7 @@ export function ShelfTest() {
                 data-book-id={book.id}
                 onMouseEnter={!isScrolling ? playClickSound : undefined}
                 onTouchStart={() => handleTouchStart(book.id)}
-                className="relative rounded-[1px] group cursor-pointer overflow-hidden"
+                className="relative rounded-[2px] group cursor-pointer overflow-hidden"
                 style={{
                   width: widthPx,
                   height: heightPx,
