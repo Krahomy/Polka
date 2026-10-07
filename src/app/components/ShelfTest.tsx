@@ -7,6 +7,13 @@ import { extractColor, applyNoise } from '../../lib/colorExtractor';
 
 const SPINE_COLOR_CACHE_KEY = 'spine-color-cache';
 
+// Shelf geometry (px): the board is seen slightly from above
+const SURFACE_DEPTH   = 16; // visible top surface
+const SURFACE_OVERLAP = 10; // how far books stand into the surface
+const SURFACE_SLANT   = 12; // horizontal offset of the slanted left end
+const FRONT_HEIGHT    = 14; // front edge of the board
+const SHELF_INSET     = 10; // gap between screen edge and shelf's left end
+
 function loadColorCache(): Map<number, [number, number, number]> {
   try {
     const raw = localStorage.getItem(SPINE_COLOR_CACHE_KEY);
@@ -257,6 +264,8 @@ export function ShelfTest() {
     effectiveTilts.push(effective);
   }
 
+  const shelfImage = customShelfImage ?? defaultShelfImage ?? '/shelf-wood.jpg';
+
   return (
     <div className="relative w-full pt-12 shadow-sm bg-[#f8f8f8]">
 
@@ -275,10 +284,18 @@ export function ShelfTest() {
         }}
       >
         <div
-          className="flex items-end justify-start space-x-[2px] perspective-[1000px] min-h-[285px] pl-4"
+          className="relative pb-10"
           style={{
-            width: `${shelfWidth}px`,
+            width: `${shelfWidth + SHELF_INSET + SURFACE_SLANT}px`,
             minWidth: '100%',
+            touchAction: 'pan-x',
+          }}
+        >
+        <div
+          className="relative z-10 flex items-end justify-start space-x-[2px] perspective-[1000px] min-h-[285px]"
+          style={{
+            paddingLeft: SHELF_INSET + SURFACE_SLANT + 8,
+            marginBottom: -SURFACE_OVERLAP,
             touchAction: 'pan-x',
           }}
         >
@@ -385,35 +402,47 @@ export function ShelfTest() {
             );
           })}
         </div>
-      </div>
 
-      {/* Shelf Board */}
-      <div className="relative h-5 w-full shadow-xl z-20">
-        <div
-          className="absolute inset-0 w-full h-full"
-          style={{
-            backgroundImage: `url(${customShelfImage ?? defaultShelfImage ?? '/shelf-wood.jpg'})`,
-            backgroundSize: 'auto 100%',
-            backgroundRepeat: 'repeat-x',
-            backgroundPosition: 'left center',
-          }}
-        >
-          <div className="absolute top-0 left-0 right-0 h-[1px] bg-white/30"></div>
+        {/* Shelf Board: top surface seen slightly from above + front edge */}
+        <div className="relative" style={{ marginLeft: SHELF_INSET }}>
+          {/* Top surface, left end slanted to show the shelf's edge */}
           <div
-            className="absolute inset-0 border-t"
+            className="relative"
             style={{
-              borderColor: 'rgba(255,255,255,0.15)',
-              background: 'linear-gradient(to bottom, rgba(255,255,255,0.05), rgba(0,0,0,0.08))',
+              height: SURFACE_DEPTH,
+              clipPath: `polygon(${SURFACE_SLANT}px 0, 100% 0, 100% 100%, 0 100%)`,
+              backgroundImage: `linear-gradient(to bottom, rgba(0,0,0,0.22), rgba(255,255,255,0.18) 45%, rgba(255,255,255,0.32)), url(${shelfImage})`,
+              backgroundSize: 'auto, auto 100%',
+              backgroundRepeat: 'no-repeat, repeat-x',
+            }}
+          />
+          {/* Front edge */}
+          <div
+            className="relative rounded-bl-[2px]"
+            style={{
+              height: FRONT_HEIGHT,
+              backgroundImage: `url(${shelfImage})`,
+              backgroundSize: 'auto 100%',
+              backgroundRepeat: 'repeat-x',
+              backgroundPosition: 'left center',
+            }}
+          >
+            <div className="absolute top-0 left-0 right-0 h-[1px] bg-white/40"></div>
+            <div
+              className="absolute inset-0"
+              style={{ background: 'linear-gradient(to bottom, rgba(255,255,255,0.06), rgba(0,0,0,0.12))' }}
+            ></div>
+          </div>
+          {/* Shadow under the shelf */}
+          <div
+            className="absolute left-0 right-0 h-12 pointer-events-none top-[calc(100%-4px)]"
+            style={{
+              background: 'linear-gradient(to bottom, rgba(0,0,0,0.4), rgba(0,0,0,0))',
+              filter: 'blur(6px)',
             }}
           ></div>
         </div>
-        <div
-          className="absolute left-0 right-0 h-16 pointer-events-none top-[calc(100%-4px)]"
-          style={{
-            background: 'linear-gradient(to bottom, rgba(0,0,0,0.45), rgba(0,0,0,0))',
-            filter: 'blur(6px)',
-          }}
-        ></div>
+        </div>
       </div>
     </div>
   );
