@@ -13,6 +13,9 @@ const TEST_MIN_SPINE_WIDTH = 16;
 // Stored tilts are -4..4 degrees; scale them down so books lean less (max ≈ 2.6°)
 const TEST_TILT_SCALE = 0.65;
 
+// Room below the board, inside the scroll area, for the shelf's shadow (px)
+const SHELF_SHADOW_ROOM = 40;
+
 
 function loadColorCache(): Map<number, [number, number, number]> {
   try {
@@ -54,7 +57,6 @@ export function ShelfTest() {
   const audioContextRef = useRef<AudioContext | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const shelfShadowRef = useRef<HTMLDivElement>(null);
 
   const initAudioContext = () => {
     if (!audioContextRef.current) {
@@ -145,14 +147,6 @@ export function ShelfTest() {
       }
 
       lastScrollLeftRef.current = scrollContainer.scrollLeft;
-
-      // During the edge bounce the shelf moves past its limits; move the shadow along with it
-      if (shelfShadowRef.current) {
-        const left = scrollContainer.scrollLeft;
-        const max = scrollContainer.scrollWidth - scrollContainer.clientWidth;
-        const overshoot = left < 0 ? -left : left > max ? max - left : 0;
-        shelfShadowRef.current.style.transform = `translateX(${overshoot}px)`;
-      }
 
       const pollScrollStop = () => {
         const prevPos = lastScrollLeftRef.current;
@@ -279,15 +273,18 @@ export function ShelfTest() {
       {/* Books Container */}
       <div
         ref={scrollContainerRef}
-        className="overflow-x-auto [&::-webkit-scrollbar]:hidden z-10 relative min-h-[285px]"
+        className="overflow-x-auto [&::-webkit-scrollbar]:hidden z-20 relative min-h-[285px]"
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         onTouchCancel={handleTouchEnd}
         style={{
           // Scrollbar hidden; the shelf is scrolled by swiping
           scrollbarWidth: 'none',
-          touchAction: 'pan-x',
+          // Vertical swipes still scroll the page outside the books (board and shadow strip)
+          touchAction: 'pan-x pan-y',
           overflowY: 'hidden',
+          // The scroll area also holds the shadow below the board; pull following content back up
+          marginBottom: -SHELF_SHADOW_ROOM,
         }}
       >
         {/* Books and board scroll together, so books don't slide over the shelf */}
@@ -296,7 +293,8 @@ export function ShelfTest() {
           style={{
             width: `${shelfWidth}px`,
             minWidth: '100%',
-            touchAction: 'pan-x',
+            paddingBottom: SHELF_SHADOW_ROOM,
+            touchAction: 'pan-x pan-y',
           }}
         >
         <div
@@ -428,20 +426,19 @@ export function ShelfTest() {
           ></div>
         </div>
         </div>
-        </div>
-      </div>
 
-      {/* Shadow under the shelf: outside the scroll area so it isn't clipped; follows the edge bounce */}
-      <div className="relative h-0 w-full z-20">
+        {/* Shadow under the shelf: inside the scroll area, so it moves with the board, edge bounce included */}
         <div
-          ref={shelfShadowRef}
-          className="absolute left-0 right-0 h-16 pointer-events-none -top-1"
+          className="absolute left-0 right-0 bottom-0 pointer-events-none"
           style={{
+            height: SHELF_SHADOW_ROOM + 4,
             background: 'linear-gradient(to bottom, rgba(0,0,0,0.45), rgba(0,0,0,0))',
             filter: 'blur(6px)',
           }}
         ></div>
+        </div>
       </div>
+
     </div>
   );
 }
