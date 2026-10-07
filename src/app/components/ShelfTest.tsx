@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useReducer } from 'react';
 import { motion } from 'motion/react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { loadShadowOpacity, loadShelfImage, loadDefaultShelfImage, STORAGE_KEY_SETTINGS } from './bookData';
 import { useBooksContext } from '../context/BooksContext';
 import { buildSpineSVG, spineWidth, titleToRgb, applyColorSettings } from '../../lib/spineGenerator';
@@ -12,6 +13,9 @@ const TEST_MIN_SPINE_WIDTH = 16;
 
 // Stored tilts are -4..4 degrees; scale them down so books lean less (max ≈ 2.6°)
 const TEST_TILT_SCALE = 0.65;
+
+// Gap kept between a revealed book and the shelf edge after paging (px)
+const PAGE_EDGE_GAP = 16;
 
 function loadColorCache(): Map<number, [number, number, number]> {
   try {
@@ -41,6 +45,8 @@ export function ShelfTest() {
   const [defaultShelfImage, setDefaultShelfImage] = useState<string | null>(() => loadDefaultShelfImage());
   const [touchedBookId, setTouchedBookId] = useState<number | null>(null);
   const [isScrolling, setIsScrolling] = useState(false);
+  const [canPageLeft, setCanPageLeft] = useState(false);
+  const [canPageRight, setCanPageRight] = useState(false);
 
   const colorCacheRef = useRef<Map<number, [number, number, number]>>(loadColorCache());
   const [, forceUpdate] = useReducer((x: number) => x + 1, 0);
@@ -143,6 +149,7 @@ export function ShelfTest() {
       }
 
       lastScrollLeftRef.current = scrollContainer.scrollLeft;
+      updatePaging();
 
       const pollScrollStop = () => {
         const prevPos = lastScrollLeftRef.current;
@@ -184,11 +191,63 @@ export function ShelfTest() {
     };
   }, []);
 
+  // Book edges in content coordinates (the scroll container is their offsetParent)
+  const getBookEdges = () => {
+    const container = scrollContainerRef.current;
+    if (!container) return [];
+    return Array.from(container.querySelectorAll<HTMLElement>('[data-book-id]')).map((el) => {
+      const style = getComputedStyle(el);
+      return {
+        left: el.offsetLeft - parseFloat(style.marginLeft || '0'),
+        right: el.offsetLeft + el.offsetWidth + parseFloat(style.marginRight || '0'),
+      };
+    });
+  };
+
+  // Show an arrow only when a book is actually cut off on that side
+  const updatePaging = () => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+    const viewLeft = container.scrollLeft;
+    const viewRight = viewLeft + container.clientWidth;
+    const edges = getBookEdges();
+    setCanPageLeft(edges.some((b) => b.left < viewLeft - 1));
+    setCanPageRight(edges.some((b) => b.right > viewRight + 1));
+  };
+
+  // Shift books left until the next hidden book on the right is fully visible
+  const pageRight = () => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+    const viewRight = container.scrollLeft + container.clientWidth;
+    const next = getBookEdges().find((b) => b.right > viewRight + 1);
+    if (!next) return;
+    const max = container.scrollWidth - container.clientWidth;
+    container.scrollTo({ left: Math.min(next.right - container.clientWidth + PAGE_EDGE_GAP, max), behavior: 'smooth' });
+  };
+
+  // Mirror of pageRight: bring the nearest hidden book on the left into view
+  const pageLeft = () => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+    const viewLeft = container.scrollLeft;
+    const prev = [...getBookEdges()].reverse().find((b) => b.left < viewLeft - 1);
+    if (!prev) return;
+    container.scrollTo({ left: Math.max(prev.left - PAGE_EDGE_GAP, 0), behavior: 'smooth' });
+  };
+
+  // Start from the first book; newer books that don't fit are reached with the arrow
   useEffect(() => {
     if (scrollContainerRef.current) {
-      scrollContainerRef.current.scrollLeft = scrollContainerRef.current.scrollWidth;
+      scrollContainerRef.current.scrollLeft = 0;
     }
+    updatePaging();
   }, [books.length]);
+
+  useEffect(() => {
+    window.addEventListener('resize', updatePaging);
+    return () => window.removeEventListener('resize', updatePaging);
+  }, []);
 
   useEffect(() => {
     const handleSettingsUpdated = () => {
@@ -269,15 +328,15 @@ export function ShelfTest() {
       {/* Books Container */}
       <div
         ref={scrollContainerRef}
-        className="overflow-x-auto z-10 relative min-h-[285px]"
+        className="overflow-hidden z-10 relative min-h-[285px]"
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         onTouchCancel={handleTouchEnd}
         style={{
-          scrollbarWidth: 'thin',
-          scrollbarColor: 'rgba(139, 111, 71, 0.5) transparent',
-          touchAction: 'pan-x',
+          // No manual horizontal scrolling: books move only with the arrow buttons
+          overflowX: 'hidden',
           overflowY: 'hidden',
+          touchAction: 'pan-y',
         }}
       >
         <div
@@ -285,7 +344,7 @@ export function ShelfTest() {
           style={{
             width: `${shelfWidth}px`,
             minWidth: '100%',
-            touchAction: 'pan-x',
+            touchAction: 'pan-y',
           }}
         >
           {finishedBooks.map((book, index) => {
@@ -332,7 +391,7 @@ export function ShelfTest() {
                   marginRight: marginRight,
                   transformOrigin: tilt > 0 ? 'bottom left' : tilt < 0 ? 'bottom right' : 'bottom center',
                   pointerEvents: isScrolling ? 'none' : 'auto',
-                  touchAction: 'pan-x',
+                  touchAction: 'pan-y',
                   flexShrink: 0,
                   backgroundColor: `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`,
                 }}
@@ -397,6 +456,28 @@ export function ShelfTest() {
           })}
         </div>
       </div>
+
+      {/* Paging arrows: appear only when books are cut off on that side */}
+      {canPageLeft && (
+        <button
+          type="button"
+          onClick={pageLeft}
+          aria-label="Показать предыдущие книги"
+          className="absolute left-2 top-[190px] -translate-y-1/2 z-30 p-2 rounded-full bg-white/85 text-gray-700 shadow-md border border-gray-200 active:scale-95 transition-transform"
+        >
+          <ChevronLeft className="w-5 h-5" />
+        </button>
+      )}
+      {canPageRight && (
+        <button
+          type="button"
+          onClick={pageRight}
+          aria-label="Показать следующие книги"
+          className="absolute right-2 top-[190px] -translate-y-1/2 z-30 p-2 rounded-full bg-white/85 text-gray-700 shadow-md border border-gray-200 active:scale-95 transition-transform"
+        >
+          <ChevronRight className="w-5 h-5" />
+        </button>
+      )}
 
       {/* Shelf Board */}
       <div className="relative h-5 w-full shadow-xl z-20">
