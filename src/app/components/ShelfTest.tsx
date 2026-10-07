@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useReducer } from 'react';
 import { motion } from 'motion/react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { loadShadowOpacity, loadShelfImage, loadDefaultShelfImage, STORAGE_KEY_SETTINGS } from './bookData';
+import { loadShadowOpacity, STORAGE_KEY_SETTINGS } from './bookData';
 import { useBooksContext } from '../context/BooksContext';
 import { buildSpineSVG, spineWidth, titleToRgb, applyColorSettings } from '../../lib/spineGenerator';
 import { extractColor, applyNoise } from '../../lib/colorExtractor';
@@ -16,6 +16,9 @@ const TEST_TILT_SCALE = 0.65;
 
 // Gap kept between a revealed book and the shelf edge after paging (px)
 const PAGE_EDGE_GAP = 16;
+
+// Light wood texture for the board (alternative: '/shelf-wood-pine.jpg')
+const TEST_SHELF_IMAGE = '/shelf-wood-light.jpg';
 
 function loadColorCache(): Map<number, [number, number, number]> {
   try {
@@ -41,8 +44,6 @@ export function ShelfTest() {
   const { books } = useBooksContext();
 
   const [shadowOpacity, setShadowOpacity] = useState<number>(() => loadShadowOpacity());
-  const [customShelfImage, setCustomShelfImage] = useState<string | null>(() => loadShelfImage());
-  const [defaultShelfImage, setDefaultShelfImage] = useState<string | null>(() => loadDefaultShelfImage());
   const [touchedBookId, setTouchedBookId] = useState<number | null>(null);
   const [isScrolling, setIsScrolling] = useState(false);
   const [canPageLeft, setCanPageLeft] = useState(false);
@@ -273,12 +274,6 @@ export function ShelfTest() {
           if (settings.shadowOpacity !== undefined) {
             setShadowOpacity(settings.shadowOpacity);
           }
-          if (settings.customShelfImage !== undefined) {
-            setCustomShelfImage(settings.customShelfImage);
-          }
-          if (settings.defaultShelfImage !== undefined) {
-            setDefaultShelfImage(settings.defaultShelfImage);
-          }
         }
       } catch (e) {
         console.error("Failed to reload settings", e);
@@ -499,7 +494,8 @@ export function ShelfTest() {
         <div
           className="absolute inset-0 w-full h-full"
           style={{
-            backgroundImage: `url(${customShelfImage ?? defaultShelfImage ?? '/shelf-wood.jpg'})`,
+            // Test shelf always uses the light wood texture, ignoring images saved in settings
+            backgroundImage: `url(${TEST_SHELF_IMAGE})`,
             backgroundSize: 'auto 100%',
             backgroundRepeat: 'repeat-x',
             backgroundPosition: 'left center',
