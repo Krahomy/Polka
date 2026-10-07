@@ -7,6 +7,9 @@ import { extractColor, applyNoise } from '../../lib/colorExtractor';
 
 const SPINE_COLOR_CACHE_KEY = 'spine-color-cache';
 
+// Thinnest allowed spine on the test shelf (px)
+const TEST_MIN_SPINE_WIDTH = 16;
+
 function loadColorCache(): Map<number, [number, number, number]> {
   try {
     const raw = localStorage.getItem(SPINE_COLOR_CACHE_KEY);
@@ -230,7 +233,7 @@ export function ShelfTest() {
   }, [finishedBooks]);
 
   const totalBooksWidth = finishedBooks.reduce((acc, book) => {
-    const widthPx = spineWidth(book.pages);
+    const widthPx = spineWidth(book.pages, TEST_MIN_SPINE_WIDTH);
     const heightPx = getBookHeightPixels(book.height);
     const tilt = book.tilt || 0;
     const offset = Math.abs(Math.sin((tilt * Math.PI) / 180) * heightPx);
@@ -289,7 +292,7 @@ export function ShelfTest() {
             const tilt = isFirstBook ? 0 : isLastBook && rawTilt > 0 ? 0 : rawTilt;
 
             const heightPx = getBookHeightPixels(book.height);
-            const widthPx  = spineWidth(book.pages);
+            const widthPx  = spineWidth(book.pages, TEST_MIN_SPINE_WIDTH);
             const offset = Math.abs(Math.sin((tilt * Math.PI) / 180) * heightPx);
             const marginLeft = tilt < 0 ? offset : 0;
             const marginRight = tilt > 0 ? offset : 0;
@@ -310,7 +313,7 @@ export function ShelfTest() {
 
             const rawRgb = colorCacheRef.current.get(book.id) ?? titleToRgb(book.title);
             const rgb    = applyColorSettings(...rawRgb);
-            const svgStr = buildSpineSVG(book, rgb, heightPx);
+            const svgStr = buildSpineSVG(book, rgb, heightPx, TEST_MIN_SPINE_WIDTH);
 
             return (
               <motion.div

@@ -121,9 +121,11 @@ function fitText(text: string, availLen: number, minSz: number, maxSz: number): 
 
 // ─── Public API ───────────────────────────────────────────────────────────────
 
-export function spineWidth(pages?: number): number {
-  if (!pages || pages <= 0) return 22;
-  return Math.round(clamp(pages * 0.065, 12, 64));
+export const MIN_SPINE_WIDTH = 12;
+
+export function spineWidth(pages?: number, minWidth = MIN_SPINE_WIDTH): number {
+  if (!pages || pages <= 0) return Math.max(22, minWidth);
+  return Math.round(clamp(pages * 0.065, minWidth, 64));
 }
 
 export function titleToRgb(title: string): RGB {
@@ -150,9 +152,9 @@ export function applyColorSettings(r: number, g: number, b: number): RGB {
   ];
 }
 
-export function buildSpineSVG(book: SpineBook, rgb: RGB, heightPx: number): string {
+export function buildSpineSVG(book: SpineBook, rgb: RGB, heightPx: number, minWidth = MIN_SPINE_WIDTH): string {
   const id   = 'b' + book.id;
-  const w    = spineWidth(book.pages);
+  const w    = spineWidth(book.pages, minWidth);
   const h    = heightPx;
   const font = getBookFont(book.id);
 
