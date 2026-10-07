@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect, useReducer } from 'react';
 import { motion } from 'motion/react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { loadShadowOpacity, loadShelfImage, loadDefaultShelfImage, STORAGE_KEY_SETTINGS } from './bookData';
 import { useBooksContext } from '../context/BooksContext';
 import { buildSpineSVG, spineWidth, titleToRgb, applyColorSettings } from '../../lib/spineGenerator';
@@ -14,8 +13,6 @@ const TEST_MIN_SPINE_WIDTH = 16;
 // Stored tilts are -4..4 degrees; scale them down so books lean less (max ≈ 2.6°)
 const TEST_TILT_SCALE = 0.65;
 
-// Gap kept between a revealed book and the shelf edge after paging (px)
-const PAGE_EDGE_GAP = 16;
 
 function loadColorCache(): Map<number, [number, number, number]> {
   try {
@@ -45,8 +42,6 @@ export function ShelfTest() {
   const [defaultShelfImage, setDefaultShelfImage] = useState<string | null>(() => loadDefaultShelfImage());
   const [touchedBookId, setTouchedBookId] = useState<number | null>(null);
   const [isScrolling, setIsScrolling] = useState(false);
-  const [canPageLeft, setCanPageLeft] = useState(false);
-  const [canPageRight, setCanPageRight] = useState(false);
 
   const colorCacheRef = useRef<Map<number, [number, number, number]>>(loadColorCache());
   const [, forceUpdate] = useReducer((x: number) => x + 1, 0);
@@ -149,7 +144,6 @@ export function ShelfTest() {
       }
 
       lastScrollLeftRef.current = scrollContainer.scrollLeft;
-      updatePaging();
 
       const pollScrollStop = () => {
         const prevPos = lastScrollLeftRef.current;
@@ -191,78 +185,11 @@ export function ShelfTest() {
     };
   }, []);
 
-  // Book edges in content coordinates (the scroll container is their offsetParent)
-  const getBookEdges = () => {
-    const container = scrollContainerRef.current;
-    if (!container) return [];
-    return Array.from(container.querySelectorAll<HTMLElement>('[data-book-id]')).map((el) => {
-      const style = getComputedStyle(el);
-      return {
-        left: el.offsetLeft - parseFloat(style.marginLeft || '0'),
-        right: el.offsetLeft + el.offsetWidth + parseFloat(style.marginRight || '0'),
-      };
-    });
-  };
-
-  // Show an arrow only when a book is actually cut off on that side
-  const updatePaging = () => {
-    const container = scrollContainerRef.current;
-    if (!container) return;
-    const viewLeft = container.scrollLeft;
-    const viewRight = viewLeft + container.clientWidth;
-    const edges = getBookEdges();
-    setCanPageLeft(edges.some((b) => b.left < viewLeft - 1));
-    setCanPageRight(edges.some((b) => b.right > viewRight + 1));
-  };
-
-  // Page forward by a whole screen: the first book cut off on the right becomes the leftmost one
-  const pageRight = () => {
-    const container = scrollContainerRef.current;
-    if (!container) return;
-    const viewRight = container.scrollLeft + container.clientWidth;
-    const next = getBookEdges().find((b) => b.right > viewRight + 1);
-    if (!next) return;
-    const max = container.scrollWidth - container.clientWidth;
-    container.scrollTo({ left: Math.min(next.left - PAGE_EDGE_GAP, max), behavior: 'smooth' });
-  };
-
-  // Page back by a whole screen: the first book cut off on the left becomes the rightmost one
-  const pageLeft = () => {
-    const container = scrollContainerRef.current;
-    if (!container) return;
-    const viewLeft = container.scrollLeft;
-    const prev = [...getBookEdges()].reverse().find((b) => b.left < viewLeft - 1);
-    if (!prev) return;
-    container.scrollTo({ left: Math.max(prev.right - container.clientWidth + PAGE_EDGE_GAP, 0), behavior: 'smooth' });
-  };
-
-  const finishedKey = books
-    .filter((book) => book.status === 'Finished')
-    .map((book) => book.id)
-    .join(',');
-  useEffect(() => {
-    updatePaging();
-  }, [finishedKey]);
-
-  // Start from the first book; newer books that don't fit are reached with the arrow
   useEffect(() => {
     if (scrollContainerRef.current) {
-      scrollContainerRef.current.scrollLeft = 0;
+      scrollContainerRef.current.scrollLeft = scrollContainerRef.current.scrollWidth;
     }
-    updatePaging();
   }, [books.length]);
-
-  // Recalculate arrows whenever the row or the shelf changes size:
-  // a book marked as finished, a new book, a window resize
-  useEffect(() => {
-    const container = scrollContainerRef.current;
-    const row = container?.firstElementChild;
-    if (!container || !row) return;
-    const observer = new ResizeObserver(() => updatePaging());
-    observer.observe(container);
-    observer.observe(row);
-    return () => observer.disconnect();
-  }, []);
 
   useEffect(() => {
     const handleSettingsUpdated = () => {
@@ -343,24 +270,29 @@ export function ShelfTest() {
       {/* Books Container */}
       <div
         ref={scrollContainerRef}
-        className="overflow-hidden z-10 relative min-h-[285px]"
+        className="overflow-x-auto [&::-webkit-scrollbar]:hidden z-10 relative min-h-[285px]"
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         onTouchCancel={handleTouchEnd}
         style={{
-          // No manual horizontal scrolling: books move only with the arrow buttons
-          overflowX: 'hidden',
+          // Scrollbar hidden; the shelf is scrolled by swiping
+          scrollbarWidth: 'none',
+          touchAction: 'pan-x',
           overflowY: 'hidden',
-          touchAction: 'pan-y',
         }}
       >
+        {/* Books and board scroll together, so books don't slide over the shelf */}
         <div
-          className="flex items-end justify-start space-x-[2px] perspective-[1000px] min-h-[285px] pl-4"
+          className="relative"
           style={{
             width: `${shelfWidth}px`,
             minWidth: '100%',
-            touchAction: 'pan-y',
+            touchAction: 'pan-x',
           }}
+        >
+        <div
+          className="flex items-end justify-start space-x-[2px] perspective-[1000px] min-h-[285px] pl-4"
+          style={{ touchAction: 'pan-x' }}
         >
           {finishedBooks.map((book, index) => {
             const isFirstBook = index === 0;
@@ -402,7 +334,7 @@ export function ShelfTest() {
                   marginRight: marginRight,
                   transformOrigin: tilt > 0 ? 'bottom left' : tilt < 0 ? 'bottom right' : 'bottom center',
                   pointerEvents: isScrolling ? 'none' : 'auto',
-                  touchAction: 'pan-y',
+                  touchAction: 'pan-x',
                   flexShrink: 0,
                   backgroundColor: `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`,
                 }}
@@ -465,32 +397,9 @@ export function ShelfTest() {
             );
           })}
         </div>
-      </div>
 
-      {/* Paging arrows: appear only when books are cut off on that side */}
-      {canPageLeft && (
-        <button
-          type="button"
-          onClick={pageLeft}
-          aria-label="Показать предыдущие книги"
-          className="absolute left-2 bottom-[130px] translate-y-1/2 z-30 p-2 rounded-full bg-white/85 text-gray-700 shadow-md border border-gray-200 active:scale-95 transition-transform"
-        >
-          <ChevronLeft className="w-5 h-5" />
-        </button>
-      )}
-      {canPageRight && (
-        <button
-          type="button"
-          onClick={pageRight}
-          aria-label="Показать следующие книги"
-          className="absolute right-2 bottom-[130px] translate-y-1/2 z-30 p-2 rounded-full bg-white/85 text-gray-700 shadow-md border border-gray-200 active:scale-95 transition-transform"
-        >
-          <ChevronRight className="w-5 h-5" />
-        </button>
-      )}
-
-      {/* Shelf Board */}
-      <div className="relative h-6 w-full shadow-xl z-20">
+        {/* Shelf Board */}
+        <div className="relative h-6 w-full z-20">
         <div
           className="absolute inset-0 w-full h-full"
           style={{
@@ -509,8 +418,14 @@ export function ShelfTest() {
             }}
           ></div>
         </div>
+        </div>
+        </div>
+      </div>
+
+      {/* Shadow under the shelf: static, outside the scroll area so it isn't clipped */}
+      <div className="relative h-0 w-full z-0">
         <div
-          className="absolute left-0 right-0 h-16 pointer-events-none top-[calc(100%-4px)]"
+          className="absolute left-0 right-0 h-16 pointer-events-none -top-1"
           style={{
             background: 'linear-gradient(to bottom, rgba(0,0,0,0.45), rgba(0,0,0,0))',
             filter: 'blur(6px)',
