@@ -22,6 +22,19 @@
           'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no'
         );
       }
+
+      // iOS shows a text-selection loupe on double tap even with user-select: none.
+      // Cancel the second tap of a double tap everywhere except text fields.
+      (function () {
+        var lastTouchEnd = 0;
+        document.addEventListener('touchend', function (e) {
+          var target = e.target;
+          if (target && target.closest && target.closest('input, textarea, [contenteditable="true"]')) return;
+          var now = Date.now();
+          if (now - lastTouchEnd < 350) e.preventDefault();
+          lastTouchEnd = now;
+        }, { passive: false });
+      })();
     </script>
   </head>
   <body>
