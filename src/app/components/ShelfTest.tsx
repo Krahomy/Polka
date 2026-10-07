@@ -10,6 +10,9 @@ const SPINE_COLOR_CACHE_KEY = 'spine-color-cache';
 // Thinnest allowed spine on the test shelf (px)
 const TEST_MIN_SPINE_WIDTH = 16;
 
+// Stored tilts are -4..4 degrees; scale them down so books lean less (max ≈ 2.6°)
+const TEST_TILT_SCALE = 0.65;
+
 function loadColorCache(): Map<number, [number, number, number]> {
   try {
     const raw = localStorage.getItem(SPINE_COLOR_CACHE_KEY);
@@ -235,7 +238,7 @@ export function ShelfTest() {
   const totalBooksWidth = finishedBooks.reduce((acc, book) => {
     const widthPx = spineWidth(book.pages, TEST_MIN_SPINE_WIDTH);
     const heightPx = getBookHeightPixels(book.height);
-    const tilt = book.tilt || 0;
+    const tilt = (book.tilt || 0) * TEST_TILT_SCALE;
     const offset = Math.abs(Math.sin((tilt * Math.PI) / 180) * heightPx);
     return acc + widthPx + offset + 2;
   }, 0);
@@ -247,7 +250,7 @@ export function ShelfTest() {
   // When conflict detected, choose between 0 and opposite direction deterministically by book.id.
   const effectiveTilts: number[] = [];
   for (let i = 0; i < finishedBooks.length; i++) {
-    const raw = finishedBooks[i].tilt || 0;
+    const raw = (finishedBooks[i].tilt || 0) * TEST_TILT_SCALE;
     let effective = raw;
     if (i > 0) {
       const prev = effectiveTilts[i - 1];
