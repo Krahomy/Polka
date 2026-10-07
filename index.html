@@ -24,16 +24,25 @@
       }
 
       // iOS shows a text-selection loupe on double tap even with user-select: none.
-      // Cancel the second tap of a double tap everywhere except text fields.
+      // The gesture starts on the second touchstart, so cancel that touch
+      // (and its touchend) everywhere except text fields.
       (function () {
-        var lastTouchEnd = 0;
-        document.addEventListener('touchend', function (e) {
-          var target = e.target;
-          if (target && target.closest && target.closest('input, textarea, [contenteditable="true"]')) return;
+        var lastTouchStart = 0;
+        var isSecondTap = false;
+        var isTextField = function (e) {
+          var t = e.target;
+          return t && t.closest && t.closest('input, textarea, [contenteditable="true"]');
+        };
+        document.addEventListener('touchstart', function (e) {
           var now = Date.now();
-          if (now - lastTouchEnd < 350) e.preventDefault();
-          lastTouchEnd = now;
-        }, { passive: false });
+          isSecondTap = now - lastTouchStart < 350 && e.touches.length === 1 && !isTextField(e);
+          lastTouchStart = now;
+          if (isSecondTap) e.preventDefault();
+        }, { passive: false, capture: true });
+        document.addEventListener('touchend', function (e) {
+          if (isSecondTap) e.preventDefault();
+        }, { passive: false, capture: true });
+        document.addEventListener('dblclick', function (e) { if (!isTextField(e)) e.preventDefault(); }, { capture: true });
       })();
     </script>
   </head>
