@@ -54,6 +54,7 @@ export function ShelfTest() {
   const audioContextRef = useRef<AudioContext | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const shelfShadowRef = useRef<HTMLDivElement>(null);
 
   const initAudioContext = () => {
     if (!audioContextRef.current) {
@@ -144,6 +145,14 @@ export function ShelfTest() {
       }
 
       lastScrollLeftRef.current = scrollContainer.scrollLeft;
+
+      // During the edge bounce the shelf moves past its limits; move the shadow along with it
+      if (shelfShadowRef.current) {
+        const left = scrollContainer.scrollLeft;
+        const max = scrollContainer.scrollWidth - scrollContainer.clientWidth;
+        const overshoot = left < 0 ? -left : left > max ? max - left : 0;
+        shelfShadowRef.current.style.transform = `translateX(${overshoot}px)`;
+      }
 
       const pollScrollStop = () => {
         const prevPos = lastScrollLeftRef.current;
@@ -422,9 +431,10 @@ export function ShelfTest() {
         </div>
       </div>
 
-      {/* Shadow under the shelf: static, outside the scroll area so it isn't clipped */}
+      {/* Shadow under the shelf: outside the scroll area so it isn't clipped; follows the edge bounce */}
       <div className="relative h-0 w-full z-20">
         <div
+          ref={shelfShadowRef}
           className="absolute left-0 right-0 h-16 pointer-events-none -top-1"
           style={{
             background: 'linear-gradient(to bottom, rgba(0,0,0,0.45), rgba(0,0,0,0))',
