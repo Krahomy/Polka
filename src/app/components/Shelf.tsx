@@ -347,7 +347,6 @@ export function Shelf() {
                 }}
                 initial={{ rotate: `${tilt}deg` }}
                 whileHover={!isScrolling && !isTouchDeviceRef.current ? {
-                  scale: 1.1,
                   zIndex: 50,
                   y: -15,
                   rotate: "0deg",
@@ -355,7 +354,6 @@ export function Shelf() {
                   transition: { type: "spring", stiffness: 300, damping: 20 }
                 } : undefined}
                 animate={shouldAnimate ? {
-                  scale: 1.1,
                   zIndex: 50,
                   y: -15,
                   rotate: "0deg",
