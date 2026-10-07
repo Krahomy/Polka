@@ -215,7 +215,7 @@ export function ShelfTest() {
     setCanPageRight(edges.some((b) => b.right > viewRight + 1));
   };
 
-  // Shift books left until the next hidden book on the right is fully visible
+  // Page forward by a whole screen: the first book cut off on the right becomes the leftmost one
   const pageRight = () => {
     const container = scrollContainerRef.current;
     if (!container) return;
@@ -223,17 +223,17 @@ export function ShelfTest() {
     const next = getBookEdges().find((b) => b.right > viewRight + 1);
     if (!next) return;
     const max = container.scrollWidth - container.clientWidth;
-    container.scrollTo({ left: Math.min(next.right - container.clientWidth + PAGE_EDGE_GAP, max), behavior: 'smooth' });
+    container.scrollTo({ left: Math.min(next.left - PAGE_EDGE_GAP, max), behavior: 'smooth' });
   };
 
-  // Mirror of pageRight: bring the nearest hidden book on the left into view
+  // Page back by a whole screen: the first book cut off on the left becomes the rightmost one
   const pageLeft = () => {
     const container = scrollContainerRef.current;
     if (!container) return;
     const viewLeft = container.scrollLeft;
     const prev = [...getBookEdges()].reverse().find((b) => b.left < viewLeft - 1);
     if (!prev) return;
-    container.scrollTo({ left: Math.max(prev.left - PAGE_EDGE_GAP, 0), behavior: 'smooth' });
+    container.scrollTo({ left: Math.max(prev.right - container.clientWidth + PAGE_EDGE_GAP, 0), behavior: 'smooth' });
   };
 
   // Start from the first book; newer books that don't fit are reached with the arrow
