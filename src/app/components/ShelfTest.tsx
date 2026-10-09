@@ -13,6 +13,9 @@ const TEST_MIN_SPINE_WIDTH = 16;
 // Stored tilts are -4..4 degrees; scale them down so books lean less (max ≈ 2.6°)
 const TEST_TILT_SCALE = 0.65;
 
+// Tallest allowed spine on the test shelf (px); was 224
+const TEST_MAX_SPINE_HEIGHT = 208;
+
 // Room below the board, inside the scroll area, for the shelf's shadow (px)
 const SHELF_SHADOW_ROOM = 40;
 
@@ -219,9 +222,13 @@ export function ShelfTest() {
     return () => window.removeEventListener('books-updated', handleSettingsUpdated);
   }, []);
 
+  // Stored heights are h-48..h-56 (192..224px); squeeze everything above 192px
+  // into 192..TEST_MAX_SPINE_HEIGHT so tall books stay different but lower
   const getBookHeightPixels = (heightClass: string) => {
     const numericPart = parseInt(heightClass.replace('h-', ''));
-    return numericPart * 4;
+    const px = numericPart * 4;
+    if (px <= 192) return px;
+    return Math.round(192 + (Math.min(px, 224) - 192) * (TEST_MAX_SPINE_HEIGHT - 192) / (224 - 192));
   };
 
   const finishedBooks = books.filter((book) => book.status === 'Finished')
