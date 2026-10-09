@@ -14,7 +14,7 @@ const TEST_MIN_SPINE_WIDTH = 16;
 const TEST_TILT_SCALE = 0.65;
 
 // Tallest allowed spine on the test shelf (px); was 224
-const TEST_MAX_SPINE_HEIGHT = 208;
+const TEST_MAX_SPINE_HEIGHT = 200;
 
 // Room below the board, inside the scroll area, for the shelf's shadow (px)
 const SHELF_SHADOW_ROOM = 40;
