@@ -17,7 +17,7 @@ const TEST_SPINE_WIDTH_SCALE = 1.15;
 const TEST_TILT_SCALE = 0.65;
 
 // Tallest allowed spine on the test shelf (px); was 224
-const TEST_MAX_SPINE_HEIGHT = 180;
+const TEST_MAX_SPINE_HEIGHT = 208;
 
 // Shortest spine on the test shelf (px); a wider min..max range makes heights vary more
 const TEST_MIN_SPINE_HEIGHT = 140;
