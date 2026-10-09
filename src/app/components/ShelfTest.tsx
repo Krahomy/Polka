@@ -14,7 +14,10 @@ const TEST_MIN_SPINE_WIDTH = 16;
 const TEST_TILT_SCALE = 0.65;
 
 // Tallest allowed spine on the test shelf (px); was 224
-const TEST_MAX_SPINE_HEIGHT = 200;
+const TEST_MAX_SPINE_HEIGHT = 180;
+
+// Shortest spine on the test shelf (px); a wider min..max range makes heights vary more
+const TEST_MIN_SPINE_HEIGHT = 140;
 
 // Room below the board, inside the scroll area, for the shelf's shadow (px)
 const SHELF_SHADOW_ROOM = 40;
@@ -222,13 +225,14 @@ export function ShelfTest() {
     return () => window.removeEventListener('books-updated', handleSettingsUpdated);
   }, []);
 
-  // Stored heights are h-48..h-56 (192..224px); squeeze everything above 192px
-  // into 192..TEST_MAX_SPINE_HEIGHT so tall books stay different but lower
-  const getBookHeightPixels = (heightClass: string) => {
-    const numericPart = parseInt(heightClass.replace('h-', ''));
-    const px = numericPart * 4;
-    if (px <= 192) return px;
-    return Math.round(192 + (Math.min(px, 224) - 192) * (TEST_MAX_SPINE_HEIGHT - 192) / (224 - 192));
+  // Stored heights are h-46..h-56 (184..224px). Map them onto TEST_MIN..TEST_MAX
+  // and add a small per-book offset so neighbouring books differ more
+  const getBookHeightPixels = (heightClass: string, bookId = 0) => {
+    const px = parseInt(heightClass.replace('h-', '')) * 4;
+    const t = (Math.min(Math.max(px, 184), 224) - 184) / (224 - 184);
+    const jitter = (((bookId * 2654435761) >>> 0) % 9) - 4; // -4..4 px, stable per book
+    const h = TEST_MIN_SPINE_HEIGHT + t * (TEST_MAX_SPINE_HEIGHT - TEST_MIN_SPINE_HEIGHT) + jitter;
+    return Math.round(Math.min(Math.max(h, TEST_MIN_SPINE_HEIGHT), TEST_MAX_SPINE_HEIGHT));
   };
 
   const finishedBooks = books.filter((book) => book.status === 'Finished')
@@ -248,7 +252,7 @@ export function ShelfTest() {
 
   const totalBooksWidth = finishedBooks.reduce((acc, book) => {
     const widthPx = spineWidth(book.pages, TEST_MIN_SPINE_WIDTH);
-    const heightPx = getBookHeightPixels(book.height);
+    const heightPx = getBookHeightPixels(book.height, book.id);
     const tilt = (book.tilt || 0) * TEST_TILT_SCALE;
     const offset = Math.abs(Math.sin((tilt * Math.PI) / 180) * heightPx);
     return acc + widthPx + offset + 2;
@@ -314,7 +318,7 @@ export function ShelfTest() {
             const rawTilt = effectiveTilts[index];
             const tilt = isFirstBook ? 0 : isLastBook && rawTilt > 0 ? 0 : rawTilt;
 
-            const heightPx = getBookHeightPixels(book.height);
+            const heightPx = getBookHeightPixels(book.height, book.id);
             const widthPx  = spineWidth(book.pages, TEST_MIN_SPINE_WIDTH);
             const offset = Math.abs(Math.sin((tilt * Math.PI) / 180) * heightPx);
             const marginLeft = tilt < 0 ? offset : 0;
