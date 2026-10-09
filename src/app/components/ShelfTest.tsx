@@ -8,7 +8,10 @@ import { extractColor, applyNoise } from '../../lib/colorExtractor';
 const SPINE_COLOR_CACHE_KEY = 'spine-color-cache';
 
 // Thinnest allowed spine on the test shelf (px)
-const TEST_MIN_SPINE_WIDTH = 16;
+const TEST_MIN_SPINE_WIDTH = 18;
+
+// Spines on the test shelf are a bit wider than page count alone gives
+const TEST_SPINE_WIDTH_SCALE = 1.15;
 
 // Stored tilts are -4..4 degrees; scale them down so books lean less (max ≈ 2.6°)
 const TEST_TILT_SCALE = 0.65;
@@ -251,7 +254,7 @@ export function ShelfTest() {
   }, [finishedBooks]);
 
   const totalBooksWidth = finishedBooks.reduce((acc, book) => {
-    const widthPx = spineWidth(book.pages, TEST_MIN_SPINE_WIDTH);
+    const widthPx = spineWidth(book.pages, TEST_MIN_SPINE_WIDTH, TEST_SPINE_WIDTH_SCALE);
     const heightPx = getBookHeightPixels(book.height, book.id);
     const tilt = (book.tilt || 0) * TEST_TILT_SCALE;
     const offset = Math.abs(Math.sin((tilt * Math.PI) / 180) * heightPx);
@@ -319,7 +322,7 @@ export function ShelfTest() {
             const tilt = isFirstBook ? 0 : isLastBook && rawTilt > 0 ? 0 : rawTilt;
 
             const heightPx = getBookHeightPixels(book.height, book.id);
-            const widthPx  = spineWidth(book.pages, TEST_MIN_SPINE_WIDTH);
+            const widthPx  = spineWidth(book.pages, TEST_MIN_SPINE_WIDTH, TEST_SPINE_WIDTH_SCALE);
             const offset = Math.abs(Math.sin((tilt * Math.PI) / 180) * heightPx);
             const marginLeft = tilt < 0 ? offset : 0;
             const marginRight = tilt > 0 ? offset : 0;
@@ -336,7 +339,7 @@ export function ShelfTest() {
 
             const rawRgb = colorCacheRef.current.get(book.id) ?? titleToRgb(book.title);
             const rgb    = applyColorSettings(...rawRgb);
-            const svgStr = buildSpineSVG(book, rgb, heightPx, TEST_MIN_SPINE_WIDTH);
+            const svgStr = buildSpineSVG(book, rgb, heightPx, TEST_MIN_SPINE_WIDTH, TEST_SPINE_WIDTH_SCALE);
 
             return (
               <motion.div
