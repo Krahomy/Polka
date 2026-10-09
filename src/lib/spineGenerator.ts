@@ -152,7 +152,34 @@ export function applyColorSettings(r: number, g: number, b: number): RGB {
   ];
 }
 
-export function buildSpineSVG(book: SpineBook, rgb: RGB, heightPx: number, minWidth = MIN_SPINE_WIDTH, widthScale = 1): string {
+// ─── Spine finishes (gloss, foil, wear, rounded) ─────────────────────────────
+
+export interface SpineFinish {
+  gloss: boolean;
+  foil: 'gold' | 'silver' | null;
+  worn: boolean;
+  rounded: boolean;
+}
+
+// Stable per book: each property reads its own slice of the id hash
+export function spineFinish(bookId: number): SpineFinish {
+  const h = (Math.imul(bookId, 2246822519) ^ Math.imul(bookId, 3266489917)) >>> 0;
+  const pick = (shift: number, percent: number) => ((h >>> shift) % 100) < percent;
+  const gloss = pick(0, 24);
+  return {
+    gloss,
+    rounded: pick(7, 35),
+    foil: pick(14, 30) ? (((h >>> 21) & 1) === 0 ? 'gold' : 'silver') : null,
+    worn: !gloss && pick(23, 20),
+  };
+}
+
+const FOIL_STOPS: Record<'gold' | 'silver', string[]> = {
+  gold:   ['#b8862b', '#f3dc8a', '#c99a2e', '#fff1b8', '#a8771f'],
+  silver: ['#8c8c8c', '#f2f2f2', '#a9a9a9', '#ffffff', '#7d7d7d'],
+};
+
+export function buildSpineSVG(book: SpineBook, rgb: RGB, heightPx: number, minWidth = MIN_SPINE_WIDTH, widthScale = 1, finish?: SpineFinish): string {
   const id   = 'b' + book.id;
   const w    = spineWidth(book.pages, minWidth, widthScale);
   const h    = heightPx;
@@ -230,6 +257,66 @@ export function buildSpineSVG(book: SpineBook, rgb: RGB, heightPx: number, minWi
     ? `<svg x="${decorX.toFixed(1)}" y="${finalDecorY}" width="${dSz}" height="${dSz}" opacity="${DECOR_OPACITY}"><use href="#${decors.top.id}"/></svg>`
     : '';
 
+  // Finish layers (empty strings when no finish is given, so the classic spine is unchanged)
+  const foil = finish?.foil && !light ? finish.foil : null; // foil only reads on dark spines
+  const titleFill = foil ? `url(#fl_${id})` : textMain;
+  let finishDefs = '';
+  let finishUnder = ''; // between background and text
+  let finishOver = '';  // above the text
+  if (finish?.rounded) {
+    finishDefs += `<linearGradient id="rd_${id}" x1="0" y1="0" x2="1" y2="0">
+    <stop offset="0%" stop-color="#000" stop-opacity="0.28"/>
+    <stop offset="12%" stop-color="#000" stop-opacity="0.08"/>
+    <stop offset="40%" stop-color="#fff" stop-opacity="0.12"/>
+    <stop offset="75%" stop-color="#000" stop-opacity="0.04"/>
+    <stop offset="100%" stop-color="#000" stop-opacity="0.30"/>
+  </linearGradient>`;
+    finishUnder += `<rect width="${w}" height="${h}" fill="url(#rd_${id})"/>`;
+  }
+  if (finish?.worn) {
+    finishDefs += `<linearGradient id="sf_${id}" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#fff" stop-opacity="0.16"/>
+    <stop offset="35%" stop-color="#fff" stop-opacity="0"/>
+  </linearGradient>
+  <filter id="wr_${id}" x="0" y="0" width="100%" height="100%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="${hh % 97}"/>
+    <feColorMatrix type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  9 0 0 0 -5"/>
+  </filter>
+  <linearGradient id="wx_${id}" x1="0" y1="0" x2="1" y2="0">
+    <stop offset="0%" stop-color="#fff"/><stop offset="18%" stop-color="#000"/>
+    <stop offset="82%" stop-color="#000"/><stop offset="100%" stop-color="#fff"/>
+  </linearGradient>
+  <linearGradient id="wy_${id}" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#fff" stop-opacity="1"/><stop offset="6%" stop-color="#fff" stop-opacity="0"/>
+    <stop offset="94%" stop-color="#fff" stop-opacity="0"/><stop offset="100%" stop-color="#fff" stop-opacity="1"/>
+  </linearGradient>
+  <mask id="wm_${id}">
+    <rect width="${w}" height="${h}" fill="url(#wx_${id})"/>
+    <rect width="${w}" height="${h}" fill="url(#wy_${id})"/>
+  </mask>`;
+    finishUnder += `<rect width="${w}" height="${h}" fill="url(#sf_${id})"/>
+<rect width="${w}" height="${h}" fill="#fff" filter="url(#wr_${id})" mask="url(#wm_${id})" opacity="0.3"/>`;
+  }
+  if (foil) {
+    const stops = FOIL_STOPS[foil];
+    finishDefs += `<linearGradient id="fl_${id}" x1="0" y1="0" x2="1" y2="0">
+    ${stops.map((c, i) => `<stop offset="${Math.round(i * 100 / (stops.length - 1))}%" stop-color="${c}"/>`).join('')}
+  </linearGradient>`;
+  }
+  if (finish?.gloss) {
+    finishDefs += `<linearGradient id="gs_${id}" x1="0" y1="0" x2="1" y2="0">
+    <stop offset="20%" stop-color="#fff" stop-opacity="0"/>
+    <stop offset="27%" stop-color="#fff" stop-opacity="0.35"/>
+    <stop offset="34%" stop-color="#fff" stop-opacity="0"/>
+  </linearGradient>
+  <linearGradient id="gv_${id}" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#fff" stop-opacity="0.08"/>
+    <stop offset="60%" stop-color="#fff" stop-opacity="0"/>
+  </linearGradient>`;
+    finishOver += `<rect width="${w}" height="${h}" fill="url(#gs_${id})"/>
+<rect width="${w}" height="${h}" fill="url(#gv_${id})"/>`;
+  }
+
   return `<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 ${w} ${h}">
 <defs>
   <linearGradient id="bg_${id}" x1="0" y1="0" x2="1" y2="0">
@@ -241,11 +328,13 @@ export function buildSpineSVG(book: SpineBook, rgb: RGB, heightPx: number, minWi
     <rect x="0" y="${pad}" width="${w}" height="${avail}"/>
   </clipPath>
   ${filterTag}
+  ${finishDefs}
 </defs>
 <rect width="${w}" height="${h}" fill="url(#bg_${id})"/>
 <rect x="0" y="0" width="1.5" height="${h}" fill="rgba(255,255,255,${hl})"/>
 <rect x="${w - 1}" y="0" width="1" height="${h}" fill="rgba(0,0,0,0.14)"/>
 <rect x="0" y="0" width="${w}" height="2" fill="rgba(255,255,255,0.12)" rx="0.5"/>
+${finishUnder}
 <g clip-path="url(#cp_${id})">
 <text
   x="${tCX}" y="${tCY}"
@@ -254,7 +343,7 @@ export function buildSpineSVG(book: SpineBook, rgb: RGB, heightPx: number, minWi
   font-weight="${font.weight}"
   font-style="${font.style}"
   letter-spacing="${font.spacing}"
-  fill="${textMain}"
+  fill="${titleFill}"
   text-anchor="middle"
   dominant-baseline="middle"
   transform="rotate(-90,${tCX},${tCY})"
@@ -277,6 +366,7 @@ ${SHOW_DIVIDER ? `<line x1="${w * 0.15}" y1="${divY}" x2="${w * 0.85}" y2="${div
   transform="rotate(-90,${aCX},${aCY})"
 >${esc(authorFit.text)}</text>
 </g>` : ''}
+${finishOver}
 ${decorSVG}
 </svg>`;
 }

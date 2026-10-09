@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useReducer } from 'react';
 import { motion } from 'motion/react';
 import { loadShadowOpacity, loadShelfImage, loadDefaultShelfImage, STORAGE_KEY_SETTINGS } from './bookData';
 import { useBooksContext } from '../context/BooksContext';
-import { buildSpineSVG, spineWidth, titleToRgb, applyColorSettings } from '../../lib/spineGenerator';
+import { buildSpineSVG, spineWidth, spineFinish, titleToRgb, applyColorSettings } from '../../lib/spineGenerator';
 import { extractColor, applyNoise } from '../../lib/colorExtractor';
 
 const SPINE_COLOR_CACHE_KEY = 'spine-color-cache';
@@ -339,7 +339,8 @@ export function ShelfTest() {
 
             const rawRgb = colorCacheRef.current.get(book.id) ?? titleToRgb(book.title);
             const rgb    = applyColorSettings(...rawRgb);
-            const svgStr = buildSpineSVG(book, rgb, heightPx, TEST_MIN_SPINE_WIDTH, TEST_SPINE_WIDTH_SCALE);
+            const finish = spineFinish(book.id);
+            const svgStr = buildSpineSVG(book, rgb, heightPx, TEST_MIN_SPINE_WIDTH, TEST_SPINE_WIDTH_SCALE, finish);
 
             return (
               <motion.div
@@ -392,8 +393,8 @@ export function ShelfTest() {
                   style={{ width: '100%', height: '100%', display: 'block' }}
                 />
 
-                {/* Paper noise canvas overlay */}
-                <canvas
+                {/* Paper noise canvas overlay (glossy spines are smooth, so they skip it) */}
+                {!finish.gloss && <canvas
                   ref={(canvas) => {
                     if (!canvas) return;
                     canvas.width  = widthPx;
@@ -402,7 +403,7 @@ export function ShelfTest() {
                     if (ctx) applyNoise(ctx, widthPx, heightPx);
                   }}
                   style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none' }}
-                />
+                />}
 
                 {/* Base contact shadow on the shelf */}
                 <div
