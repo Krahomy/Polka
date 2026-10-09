@@ -304,17 +304,11 @@ export function buildSpineSVG(book: SpineBook, rgb: RGB, heightPx: number, minWi
   </linearGradient>`;
   }
   if (finish?.gloss) {
-    finishDefs += `<linearGradient id="gs_${id}" x1="0" y1="0" x2="1" y2="0">
-    <stop offset="20%" stop-color="#fff" stop-opacity="0"/>
-    <stop offset="27%" stop-color="#fff" stop-opacity="0.35"/>
-    <stop offset="34%" stop-color="#fff" stop-opacity="0"/>
-  </linearGradient>
-  <linearGradient id="gv_${id}" x1="0" y1="0" x2="0" y2="1">
+    finishDefs += `<linearGradient id="gv_${id}" x1="0" y1="0" x2="0" y2="1">
     <stop offset="0%" stop-color="#fff" stop-opacity="0.08"/>
     <stop offset="60%" stop-color="#fff" stop-opacity="0"/>
   </linearGradient>`;
-    finishOver += `<rect width="${w}" height="${h}" fill="url(#gs_${id})"/>
-<rect width="${w}" height="${h}" fill="url(#gv_${id})"/>`;
+    finishOver += `<rect width="${w}" height="${h}" fill="url(#gv_${id})"/>`;
   }
 
   return `<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 ${w} ${h}">
