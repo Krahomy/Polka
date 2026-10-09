@@ -353,7 +353,8 @@ export function ShelfTest() {
                   height: heightPx,
                   marginLeft: marginLeft,
                   marginRight: marginRight,
-                  transformOrigin: tilt > 0 ? 'bottom left' : tilt < 0 ? 'bottom right' : 'bottom center',
+                  // Lean on the bottom corner on the side of the tilt, so the other corner lifts instead of sinking into the board
+                  transformOrigin: tilt > 0 ? 'bottom right' : tilt < 0 ? 'bottom left' : 'bottom center',
                   pointerEvents: isScrolling ? 'none' : 'auto',
                   touchAction: 'pan-x',
                   flexShrink: 0,
