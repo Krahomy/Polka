@@ -27,7 +27,7 @@ const SHELF_SHADOW_ROOM = 40;
 
 
 // Default decor object on the shelf (replace src with the real image)
-const DEFAULT_DECOR = { src: '/decor/placeholder.svg', defaultHeight: 150, minHeight: 60, gapLeft: 14 };
+const DEFAULT_DECOR = { src: '/decor/pot1.webp', defaultHeight: 150, minHeight: 60, gapLeft: 14 };
 const DECOR_HEIGHT_KEY = 'shelf-decor-height';
 
 // Decor height is limited by the tallest allowed spine
