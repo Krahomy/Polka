@@ -26,8 +26,13 @@ const TEST_MIN_SPINE_HEIGHT = 150;
 const SHELF_SHADOW_ROOM = 40;
 
 
-// Default decor object on the shelf (replace src with the real image)
-const DEFAULT_DECOR = { src: '/decor/pot1.webp', defaultHeight: 150, minHeight: 60, gapLeft: 14 };
+// Default decor object on the shelf.
+// baseSink: share of the image height taken by the rounded bottom; it is hidden behind the board edge.
+// baseWidth / baseCenter: width and centre of the base as shares of the image width (for the contact shadow).
+const DEFAULT_DECOR = {
+  src: '/decor/pot1.webp', defaultHeight: 150, minHeight: 60, gapLeft: 14,
+  baseSink: 0.035, baseWidth: 0.36, baseCenter: 0.53,
+};
 const DECOR_HEIGHT_KEY = 'shelf-decor-height';
 
 // Decor height is limited by the tallest allowed spine
@@ -457,24 +462,29 @@ export function ShelfTest() {
             style={{ marginLeft: DEFAULT_DECOR.gapLeft, width: decorW, height: decorH, touchAction: 'pan-x' }}
             onClick={(e) => { e.stopPropagation(); setDecorSelected((v) => !v); }}
           >
-            <img
-              src={DEFAULT_DECOR.src}
-              alt=""
-              draggable={false}
-              className="block w-full h-full object-contain object-bottom select-none"
-              onLoad={(e) => {
-                const img = e.currentTarget;
-                if (img.naturalWidth && img.naturalHeight) setDecorAspect(img.naturalWidth / img.naturalHeight);
-              }}
-            />
-            {/* Contact shadow on the shelf */}
+            {/* Rounded bottom sinks below the board's top line and is clipped there */}
+            <div className="absolute inset-0 overflow-hidden">
+              <img
+                src={DEFAULT_DECOR.src}
+                alt=""
+                draggable={false}
+                className="block w-full h-full object-contain object-bottom select-none"
+                style={{ transform: `translateY(${Math.round(decorH * DEFAULT_DECOR.baseSink)}px)` }}
+                onLoad={(e) => {
+                  const img = e.currentTarget;
+                  if (img.naturalWidth && img.naturalHeight) setDecorAspect(img.naturalWidth / img.naturalHeight);
+                }}
+              />
+            </div>
+            {/* Contact shadow under the base only */}
             <div
-              className="absolute bottom-0 left-1/2 -translate-x-1/2 pointer-events-none z-[-1]"
+              className="absolute bottom-0 pointer-events-none z-[-1]"
               style={{
-                width: decorW * 0.8,
-                height: 5,
-                background: `radial-gradient(ellipse at center, rgba(0,0,0,${Math.min(shadowOpacity * 0.5, 0.45)}) 0%, rgba(0,0,0,0) 70%)`,
-                transform: 'translateY(2px)',
+                left: `${DEFAULT_DECOR.baseCenter * 100}%`,
+                width: decorW * DEFAULT_DECOR.baseWidth * 1.15,
+                height: 6,
+                background: `radial-gradient(ellipse at center, rgba(0,0,0,${Math.min(shadowOpacity * 0.7, 0.55)}) 0%, rgba(0,0,0,0) 70%)`,
+                transform: 'translate(-50%, 2px)',
                 filter: 'blur(2px)',
               }}
             />
