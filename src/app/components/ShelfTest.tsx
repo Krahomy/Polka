@@ -27,7 +27,8 @@ const SHELF_SHADOW_ROOM = 40;
 
 
 // Decor object on the shelf.
-const DEFAULT_DECOR = { defaultHeight: 150, minHeight: 60, gapLeft: 14 };
+// defaultHeight: 150px plus two «+» steps (×1.1 each)
+const DEFAULT_DECOR = { id: 'pot2', defaultHeight: 182, minHeight: 60, gapLeft: 14 };
 const DECOR_HEIGHT_KEY = 'shelf-decor-height';
 const DECOR_CHOICE_KEY = 'shelf-decor-id';
 
@@ -44,7 +45,7 @@ function loadDecorId(): string {
     const id = localStorage.getItem(DECOR_CHOICE_KEY);
     if (id && DECOR_ITEMS.some((d) => d.id === id)) return id;
   } catch { /* ignore */ }
-  return DECOR_ITEMS[0].id;
+  return DEFAULT_DECOR.id;
 }
 
 // Decor height is limited by the tallest allowed spine
