@@ -12,7 +12,7 @@ export default function MainPage() {
         {/* Title above shelf */}
         <div className="text-center pt-3 pb-4 bg-[#F8F8F8]">
           <div className="inline-block">
-            <h1 className="text-gray-800 font-[Open_Sans] text-[22px]">
+            <h1 className="text-gray-800 font-[Manrope] font-semibold tracking-[-0.01em] text-[22px]">
               Прочитал в этом году
             </h1>
             <img
