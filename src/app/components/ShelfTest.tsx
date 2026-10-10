@@ -38,7 +38,7 @@ const DECOR_CHOICE_KEY = 'shelf-decor-id';
 const DECOR_ITEMS = [
   { id: 'pot1', label: 'Белые петунии', src: '/decor/pot1.webp', aspect: 470 / 480, baseSink: 0.035, baseWidth: 0.36, baseCenter: 0.53 },
   { id: 'pot2', label: 'Лаванда', src: '/decor/pot2.webp', aspect: 371 / 470, baseSink: 0.03, baseWidth: 0.36, baseCenter: 0.49 },
-  { id: 'figure1', label: 'Тоторо', src: '/decor/figure1.webp', aspect: 301 / 425, baseSink: 0.02, baseWidth: 0.52, baseCenter: 0.5 },
+  { id: 'figure1', label: 'Тоторо', src: '/decor/figure1.webp', aspect: 301 / 413, baseSink: 0.01, baseWidth: 0.52, baseCenter: 0.5 },
 ];
 
 function loadDecorId(): string {
