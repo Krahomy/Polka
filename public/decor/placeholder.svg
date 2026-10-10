@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="90" height="120" viewBox="0 0 90 120">
+  <!-- Placeholder decor: potted plant, base on the bottom edge. Replace with the real image. -->
+  <path d="M45 66 C43 48 34 36 22 28" fill="none" stroke="#7d9a7e" stroke-width="2.4" stroke-linecap="round"/>
+  <path d="M45 66 C47 44 56 30 70 20" fill="none" stroke="#7d9a7e" stroke-width="2.4" stroke-linecap="round"/>
+  <path d="M45 66 C45 46 45 30 44 12" fill="none" stroke="#7d9a7e" stroke-width="2.4" stroke-linecap="round"/>
+  <ellipse cx="22" cy="28" rx="11" ry="5" transform="rotate(-35 22 28)" fill="#93b294"/>
+  <ellipse cx="70" cy="20" rx="11" ry="5" transform="rotate(40 70 20)" fill="#93b294"/>
+  <ellipse cx="44" cy="12" rx="5" ry="10" fill="#a7c2a8"/>
+  <ellipse cx="32" cy="46" rx="9" ry="4" transform="rotate(-20 32 46)" fill="#86a687"/>
+  <ellipse cx="59" cy="42" rx="9" ry="4" transform="rotate(25 59 42)" fill="#86a687"/>
+  <path d="M20 64 H70 L64 116 Q63 120 59 120 H31 Q27 120 26 116 Z" fill="#d8cfc4"/>
+  <path d="M17 60 H73 Q75 60 75 62 V68 Q75 70 73 70 H17 Q15 70 15 68 V62 Q15 60 17 60 Z" fill="#cbc0b3"/>
+  <path d="M26 72 L31 116" stroke="#ffffff" stroke-opacity="0.35" stroke-width="3" stroke-linecap="round"/>
+</svg>
