@@ -26,14 +26,26 @@ const TEST_MIN_SPINE_HEIGHT = 150;
 const SHELF_SHADOW_ROOM = 40;
 
 
-// Default decor object on the shelf.
+// Decor object on the shelf.
+const DEFAULT_DECOR = { defaultHeight: 150, minHeight: 60, gapLeft: 14 };
+const DECOR_HEIGHT_KEY = 'shelf-decor-height';
+const DECOR_CHOICE_KEY = 'shelf-decor-id';
+
+// Decor catalog. aspect = image width / height.
 // baseSink: share of the image height taken by the rounded bottom; it is hidden behind the board edge.
 // baseWidth / baseCenter: width and centre of the base as shares of the image width (for the contact shadow).
-const DEFAULT_DECOR = {
-  src: '/decor/pot1.webp', defaultHeight: 150, minHeight: 60, gapLeft: 14,
-  baseSink: 0.035, baseWidth: 0.36, baseCenter: 0.53,
-};
-const DECOR_HEIGHT_KEY = 'shelf-decor-height';
+const DECOR_ITEMS = [
+  { id: 'pot1', label: 'Белые петунии', src: '/decor/pot1.webp', aspect: 470 / 480, baseSink: 0.035, baseWidth: 0.36, baseCenter: 0.53 },
+  { id: 'pot2', label: 'Лаванда', src: '/decor/pot2.webp', aspect: 371 / 470, baseSink: 0.03, baseWidth: 0.36, baseCenter: 0.49 },
+];
+
+function loadDecorId(): string {
+  try {
+    const id = localStorage.getItem(DECOR_CHOICE_KEY);
+    if (id && DECOR_ITEMS.some((d) => d.id === id)) return id;
+  } catch { /* ignore */ }
+  return DECOR_ITEMS[0].id;
+}
 
 // Decor height is limited by the tallest allowed spine
 function clampDecorHeight(h: number): number {
@@ -77,7 +89,7 @@ export function ShelfTest() {
   const [touchedBookId, setTouchedBookId] = useState<number | null>(null);
   const [isScrolling, setIsScrolling] = useState(false);
   const [decorHeight, setDecorHeight] = useState<number>(() => loadDecorHeight());
-  const [decorAspect, setDecorAspect] = useState(0.75);
+  const [decorId, setDecorId] = useState<string>(() => loadDecorId());
   const [decorSelected, setDecorSelected] = useState(false);
 
   const colorCacheRef = useRef<Map<number, [number, number, number]>>(loadColorCache());
@@ -288,7 +300,12 @@ export function ShelfTest() {
 
   // Decor object at the end of the shelf; never taller than the tallest spine
   const decorH = clampDecorHeight(decorHeight);
-  const decorW = Math.round(decorH * decorAspect);
+  const decor = DECOR_ITEMS.find((d) => d.id === decorId) ?? DECOR_ITEMS[0];
+  const decorW = Math.round(decorH * decor.aspect);
+  const chooseDecor = (id: string) => {
+    setDecorId(id);
+    try { localStorage.setItem(DECOR_CHOICE_KEY, id); } catch { /* ignore */ }
+  };
   const resizeDecor = (factor: number) => {
     const next = clampDecorHeight(Math.round(decorH * factor));
     setDecorHeight(next);
@@ -465,32 +482,28 @@ export function ShelfTest() {
             {/* Rounded bottom sinks below the board's top line and is clipped there */}
             <div className="absolute inset-0 overflow-hidden">
               <img
-                src={DEFAULT_DECOR.src}
+                src={decor.src}
                 alt=""
                 draggable={false}
                 className="block w-full h-full object-contain object-bottom select-none"
-                style={{ transform: `translateY(${Math.round(decorH * DEFAULT_DECOR.baseSink)}px)` }}
-                onLoad={(e) => {
-                  const img = e.currentTarget;
-                  if (img.naturalWidth && img.naturalHeight) setDecorAspect(img.naturalWidth / img.naturalHeight);
-                }}
+                style={{ transform: `translateY(${Math.round(decorH * decor.baseSink)}px)` }}
               />
             </div>
             {/* Contact shadow under the base only */}
             <div
               className="absolute bottom-0 pointer-events-none z-[-1]"
               style={{
-                left: `${DEFAULT_DECOR.baseCenter * 100}%`,
-                width: decorW * DEFAULT_DECOR.baseWidth * 1.15,
+                left: `${decor.baseCenter * 100}%`,
+                width: decorW * decor.baseWidth * 1.15,
                 height: 6,
                 background: `radial-gradient(ellipse at center, rgba(0,0,0,${Math.min(shadowOpacity * 0.7, 0.55)}) 0%, rgba(0,0,0,0) 70%)`,
                 transform: 'translate(-50%, 2px)',
                 filter: 'blur(2px)',
               }}
             />
-            {/* Size controls */}
+            {/* Size and choice controls */}
             {decorSelected && (
-              <div className="absolute left-1/2 -translate-x-1/2 -top-11 flex gap-2 z-50">
+              <div className="absolute left-1/2 -translate-x-1/2 -top-11 flex items-center gap-2 z-50">
                 <button
                   type="button"
                   aria-label="Уменьшить предмет"
@@ -500,6 +513,20 @@ export function ShelfTest() {
                 >
                   −
                 </button>
+                {DECOR_ITEMS.map((d) => (
+                  <button
+                    key={d.id}
+                    type="button"
+                    aria-label={d.label}
+                    aria-pressed={d.id === decor.id}
+                    onClick={(e) => { e.stopPropagation(); chooseDecor(d.id); }}
+                    className={`w-8 h-8 rounded-full bg-white/90 shadow overflow-hidden flex items-center justify-center border ${
+                      d.id === decor.id ? 'border-gray-700 border-2' : 'border-gray-200'
+                    }`}
+                  >
+                    <img src={d.src} alt="" draggable={false} className="h-6 w-6 object-contain select-none" />
+                  </button>
+                ))}
                 <button
                   type="button"
                   aria-label="Увеличить предмет"
