@@ -26,7 +26,7 @@ const MAX_SPINE_HEIGHT = 220;
 const MIN_SPINE_HEIGHT = 150;
 
 // Room below the board, inside the scroll area, for the shelf's shadow (px)
-const SHELF_SHADOW_ROOM = 40;
+const SHELF_SHADOW_ROOM = 64;
 
 
 // Decor object on the shelf.
@@ -586,10 +586,13 @@ export function Shelf() {
 
         {/* Shadow under the shelf: inside the scroll area, so it moves with the board, edge bounce included */}
         <div
-          className="absolute left-0 right-0 bottom-0 pointer-events-none"
+          className="absolute left-0 right-0 pointer-events-none"
           style={{
-            height: SHELF_SHADOW_ROOM + 4,
-            background: 'linear-gradient(to bottom, rgba(0,0,0,0.45), rgba(0,0,0,0))',
+            // Starts 4px under the board; leaves room at the bottom so the blur isn't clipped
+            top: `calc(100% - ${SHELF_SHADOW_ROOM + 4}px)`,
+            height: SHELF_SHADOW_ROOM - 12,
+            // Darkest at the board, then fades out along a curve
+            background: 'linear-gradient(to bottom, rgba(0,0,0,0.42) 0%, rgba(0,0,0,0.24) 15%, rgba(0,0,0,0.12) 35%, rgba(0,0,0,0.05) 60%, rgba(0,0,0,0.015) 80%, rgba(0,0,0,0) 100%)',
             filter: 'blur(6px)',
           }}
         ></div>
