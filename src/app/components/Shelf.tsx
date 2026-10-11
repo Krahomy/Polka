@@ -5,10 +5,65 @@ import { useNavigate } from 'react-router';
 import { loadShadowOpacity, loadShelfImage, loadDefaultShelfImage, STORAGE_KEY_SETTINGS } from './bookData';
 import { useBooksContext } from '../context/BooksContext';
 import { useAuth } from '../context/AuthContext';
-import { buildSpineSVG, spineWidth, titleToRgb, applyColorSettings } from '../../lib/spineGenerator';
+import { buildSpineSVG, spineWidth, spineFinish, titleToRgb, applyColorSettings } from '../../lib/spineGenerator';
 import { extractColor, applyNoise } from '../../lib/colorExtractor';
 
 const SPINE_COLOR_CACHE_KEY = 'spine-color-cache';
+
+// Thinnest allowed spine (px)
+const SHELF_MIN_SPINE_WIDTH = 18;
+
+// Spines are a bit wider than page count alone gives
+const SPINE_WIDTH_SCALE = 1.15;
+
+// Stored tilts are -4..4 degrees; scale them down so books lean less (max ≈ 2.6°)
+const TILT_SCALE = 0.65;
+
+// Tallest allowed spine (px)
+const MAX_SPINE_HEIGHT = 220;
+
+// Shortest spine (px); a wide min..max range makes heights vary more
+const MIN_SPINE_HEIGHT = 150;
+
+// Room below the board, inside the scroll area, for the shelf's shadow (px)
+const SHELF_SHADOW_ROOM = 40;
+
+
+// Decor object on the shelf.
+// defaultHeight: 150px plus two «+» steps (×1.1 each)
+const DEFAULT_DECOR = { id: 'pot2', defaultHeight: 182, minHeight: 60, gapLeft: 14 };
+const DECOR_HEIGHT_KEY = 'shelf-decor-height';
+const DECOR_CHOICE_KEY = 'shelf-decor-id';
+
+// Decor catalog. aspect = image width / height.
+// baseSink: share of the image height taken by the rounded bottom; it is hidden behind the board edge.
+// baseWidth / baseCenter: width and centre of the base as shares of the image width (for the contact shadow).
+const DECOR_ITEMS = [
+  { id: 'pot1', label: 'Белые петунии', src: '/decor/pot1.webp', aspect: 470 / 480, baseSink: 0.035, baseWidth: 0.36, baseCenter: 0.53 },
+  { id: 'pot2', label: 'Лаванда', src: '/decor/pot2.webp', aspect: 371 / 470, baseSink: 0.03, baseWidth: 0.36, baseCenter: 0.49 },
+  { id: 'figure1', label: 'Тоторо', src: '/decor/figure1.webp', aspect: 258 / 332, baseSink: 0.01, baseWidth: 0.45, baseCenter: 0.42 },
+];
+
+function loadDecorId(): string {
+  try {
+    const id = localStorage.getItem(DECOR_CHOICE_KEY);
+    if (id && DECOR_ITEMS.some((d) => d.id === id)) return id;
+  } catch { /* ignore */ }
+  return DEFAULT_DECOR.id;
+}
+
+// Decor height is limited by the tallest allowed spine
+function clampDecorHeight(h: number): number {
+  return Math.min(Math.max(h, DEFAULT_DECOR.minHeight), MAX_SPINE_HEIGHT);
+}
+
+function loadDecorHeight(): number {
+  try {
+    const raw = Number(localStorage.getItem(DECOR_HEIGHT_KEY));
+    if (raw > 0) return clampDecorHeight(raw);
+  } catch { /* ignore */ }
+  return DEFAULT_DECOR.defaultHeight;
+}
 
 function loadColorCache(): Map<number, [number, number, number]> {
   try {
@@ -41,6 +96,9 @@ export function Shelf() {
   const [defaultShelfImage, setDefaultShelfImage] = useState<string | null>(() => loadDefaultShelfImage());
   const [touchedBookId, setTouchedBookId] = useState<number | null>(null);
   const [isScrolling, setIsScrolling] = useState(false);
+  const [decorHeight, setDecorHeight] = useState<number>(() => loadDecorHeight());
+  const [decorId, setDecorId] = useState<string>(() => loadDecorId());
+  const [decorSelected, setDecorSelected] = useState(false);
 
   const colorCacheRef = useRef<Map<number, [number, number, number]>>(loadColorCache());
   const [, forceUpdate] = useReducer((x: number) => x + 1, 0);
@@ -215,9 +273,14 @@ export function Shelf() {
     return () => window.removeEventListener('books-updated', handleSettingsUpdated);
   }, []);
 
-  const getBookHeightPixels = (heightClass: string) => {
-    const numericPart = parseInt(heightClass.replace('h-', ''));
-    return numericPart * 4;
+  // Stored heights are h-46..h-56 (184..224px). Map them onto MIN..MAX
+  // and add a small per-book offset so neighbouring books differ more
+  const getBookHeightPixels = (heightClass: string, bookId = 0) => {
+    const px = parseInt(heightClass.replace('h-', '')) * 4;
+    const t = (Math.min(Math.max(px, 184), 224) - 184) / (224 - 184);
+    const jitter = (((bookId * 2654435761) >>> 0) % 9) - 4; // -4..4 px, stable per book
+    const h = MIN_SPINE_HEIGHT + t * (MAX_SPINE_HEIGHT - MIN_SPINE_HEIGHT) + jitter;
+    return Math.round(Math.min(Math.max(h, MIN_SPINE_HEIGHT), MAX_SPINE_HEIGHT));
   };
 
   const finishedBooks = books.filter((book) => book.status === 'Finished')
@@ -236,21 +299,35 @@ export function Shelf() {
   }, [finishedBooks]);
 
   const totalBooksWidth = finishedBooks.reduce((acc, book) => {
-    const widthPx = spineWidth(book.pages);
-    const heightPx = getBookHeightPixels(book.height);
-    const tilt = book.tilt || 0;
+    const widthPx = spineWidth(book.pages, SHELF_MIN_SPINE_WIDTH, SPINE_WIDTH_SCALE);
+    const heightPx = getBookHeightPixels(book.height, book.id);
+    const tilt = (book.tilt || 0) * TILT_SCALE;
     const offset = Math.abs(Math.sin((tilt * Math.PI) / 180) * heightPx);
     return acc + widthPx + offset + 2;
   }, 0);
 
+  // Decor object at the end of the shelf; never taller than the tallest spine
+  const decorH = clampDecorHeight(decorHeight);
+  const decor = DECOR_ITEMS.find((d) => d.id === decorId) ?? DECOR_ITEMS[0];
+  const decorW = Math.round(decorH * decor.aspect);
+  const chooseDecor = (id: string) => {
+    setDecorId(id);
+    try { localStorage.setItem(DECOR_CHOICE_KEY, id); } catch { /* ignore */ }
+  };
+  const resizeDecor = (factor: number) => {
+    const next = clampDecorHeight(Math.round(decorH * factor));
+    setDecorHeight(next);
+    try { localStorage.setItem(DECOR_HEIGHT_KEY, String(next)); } catch { /* ignore */ }
+  };
+
   const bufferSpace = 100;
-  const shelfWidth = totalBooksWidth + bufferSpace;
+  const shelfWidth = totalBooksWidth + DEFAULT_DECOR.gapLeft + decorW + bufferSpace;
 
   // Effective tilts: adjacent books must not lean the same way.
   // When conflict detected, choose between 0 and opposite direction deterministically by book.id.
   const effectiveTilts: number[] = [];
   for (let i = 0; i < finishedBooks.length; i++) {
-    const raw = finishedBooks[i].tilt || 0;
+    const raw = (finishedBooks[i].tilt || 0) * TILT_SCALE;
     let effective = raw;
     if (i > 0) {
       const prev = effectiveTilts[i - 1];
@@ -282,24 +359,34 @@ export function Shelf() {
       {/* Books Container */}
       <div
         ref={scrollContainerRef}
-        className="overflow-x-auto z-10 relative min-h-[285px]"
+        onClick={() => setDecorSelected(false)}
+        className="overflow-x-auto [&::-webkit-scrollbar]:hidden z-20 relative min-h-[285px]"
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         onTouchCancel={handleTouchEnd}
         style={{
-          scrollbarWidth: 'thin',
-          scrollbarColor: 'rgba(139, 111, 71, 0.5) transparent',
-          touchAction: 'pan-x',
+          // Scrollbar hidden; the shelf is scrolled by swiping
+          scrollbarWidth: 'none',
+          // Vertical swipes still scroll the page outside the books (board and shadow strip)
+          touchAction: 'pan-x pan-y',
           overflowY: 'hidden',
+          // The scroll area also holds the shadow below the board; pull following content back up
+          marginBottom: -SHELF_SHADOW_ROOM,
         }}
       >
+        {/* Books and board scroll together, so books don't slide over the shelf */}
         <div
-          className="flex items-end justify-start space-x-[2px] perspective-[1000px] min-h-[285px] pl-4"
+          className="relative"
           style={{
             width: `${shelfWidth}px`,
             minWidth: '100%',
-            touchAction: 'pan-x',
+            paddingBottom: SHELF_SHADOW_ROOM,
+            touchAction: 'pan-x pan-y',
           }}
+        >
+        <div
+          className="flex items-end justify-start space-x-[2px] perspective-[1000px] min-h-[285px] pl-4"
+          style={{ touchAction: 'pan-x' }}
         >
           {finishedBooks.map((book, index) => {
             const isFirstBook = index === 0;
@@ -307,8 +394,8 @@ export function Shelf() {
             const rawTilt = effectiveTilts[index];
             const tilt = isFirstBook ? 0 : isLastBook && rawTilt > 0 ? 0 : rawTilt;
 
-            const heightPx = getBookHeightPixels(book.height);
-            const widthPx  = spineWidth(book.pages);
+            const heightPx = getBookHeightPixels(book.height, book.id);
+            const widthPx  = spineWidth(book.pages, SHELF_MIN_SPINE_WIDTH, SPINE_WIDTH_SCALE);
             const offset = Math.abs(Math.sin((tilt * Math.PI) / 180) * heightPx);
             const marginLeft = tilt < 0 ? offset : 0;
             const marginRight = tilt > 0 ? offset : 0;
@@ -325,7 +412,8 @@ export function Shelf() {
 
             const rawRgb = colorCacheRef.current.get(book.id) ?? titleToRgb(book.title);
             const rgb    = applyColorSettings(...rawRgb);
-            const svgStr = buildSpineSVG(book, rgb, heightPx);
+            const finish = spineFinish(book.id);
+            const svgStr = buildSpineSVG(book, rgb, heightPx, SHELF_MIN_SPINE_WIDTH, SPINE_WIDTH_SCALE, finish);
 
             return (
               <motion.div
@@ -333,13 +421,14 @@ export function Shelf() {
                 data-book-id={book.id}
                 onMouseEnter={!isScrolling ? playClickSound : undefined}
                 onTouchStart={() => handleTouchStart(book.id)}
-                className="relative rounded-sm group cursor-pointer overflow-hidden"
+                className="relative rounded-[2px] group cursor-pointer overflow-hidden"
                 style={{
                   width: widthPx,
                   height: heightPx,
                   marginLeft: marginLeft,
                   marginRight: marginRight,
-                  transformOrigin: tilt > 0 ? 'bottom left' : tilt < 0 ? 'bottom right' : 'bottom center',
+                  // Lean on the bottom corner on the side of the tilt, so the other corner lifts instead of sinking into the board
+                  transformOrigin: tilt > 0 ? 'bottom right' : tilt < 0 ? 'bottom left' : 'bottom center',
                   pointerEvents: isScrolling ? 'none' : 'auto',
                   touchAction: 'pan-x',
                   flexShrink: 0,
@@ -377,8 +466,8 @@ export function Shelf() {
                   style={{ width: '100%', height: '100%', display: 'block' }}
                 />
 
-                {/* Paper noise canvas overlay */}
-                <canvas
+                {/* Paper noise canvas overlay (glossy spines are smooth, so they skip it) */}
+                {!finish.gloss && <canvas
                   ref={(canvas) => {
                     if (!canvas) return;
                     canvas.width  = widthPx;
@@ -387,7 +476,7 @@ export function Shelf() {
                     if (ctx) applyNoise(ctx, widthPx, heightPx);
                   }}
                   style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none' }}
-                />
+                />}
 
                 {/* Base contact shadow on the shelf */}
                 <div
@@ -403,15 +492,82 @@ export function Shelf() {
               </motion.div>
             );
           })}
-        </div>
-      </div>
 
-      {/* Shelf Board */}
-      <div className="relative h-5 w-full shadow-xl z-20">
+          {/* Decor object (template: potted plant / figurine), stands after the last book */}
+          <div
+            data-decor
+            className="relative z-[25] flex-shrink-0 cursor-pointer"
+            style={{ marginLeft: DEFAULT_DECOR.gapLeft, width: decorW, height: decorH, touchAction: 'pan-x' }}
+            onClick={(e) => { e.stopPropagation(); setDecorSelected((v) => !v); }}
+          >
+            {/* Rounded bottom sinks below the board's top line and is clipped there */}
+            <div className="absolute inset-0 overflow-hidden">
+              <img
+                src={decor.src}
+                alt=""
+                draggable={false}
+                className="block w-full h-full object-contain object-bottom select-none"
+                style={{ transform: `translateY(${Math.round(decorH * decor.baseSink)}px)` }}
+              />
+            </div>
+            {/* Contact shadow under the base only */}
+            <div
+              className="absolute bottom-0 pointer-events-none z-[-1]"
+              style={{
+                left: `${decor.baseCenter * 100}%`,
+                width: decorW * decor.baseWidth * 1.15,
+                height: 6,
+                background: `radial-gradient(ellipse at center, rgba(0,0,0,${Math.min(shadowOpacity * 0.7, 0.55)}) 0%, rgba(0,0,0,0) 70%)`,
+                transform: 'translate(-50%, 2px)',
+                filter: 'blur(2px)',
+              }}
+            />
+            {/* Size and choice controls */}
+            {decorSelected && (
+              <div className="absolute left-1/2 -translate-x-1/2 -top-11 flex items-center gap-2 z-50">
+                <button
+                  type="button"
+                  aria-label="Уменьшить предмет"
+                  disabled={decorH <= DEFAULT_DECOR.minHeight}
+                  onClick={(e) => { e.stopPropagation(); resizeDecor(1 / 1.1); }}
+                  className="w-8 h-8 rounded-full bg-white/90 border border-gray-200 shadow text-gray-700 text-lg leading-none disabled:opacity-40"
+                >
+                  −
+                </button>
+                {DECOR_ITEMS.map((d) => (
+                  <button
+                    key={d.id}
+                    type="button"
+                    aria-label={d.label}
+                    aria-pressed={d.id === decor.id}
+                    onClick={(e) => { e.stopPropagation(); chooseDecor(d.id); }}
+                    className={`w-8 h-8 rounded-full bg-white/90 shadow overflow-hidden flex items-center justify-center border ${
+                      d.id === decor.id ? 'border-gray-700 border-2' : 'border-gray-200'
+                    }`}
+                  >
+                    <img src={d.src} alt="" draggable={false} className="h-6 w-6 object-contain select-none" />
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  aria-label="Увеличить предмет"
+                  disabled={decorH >= MAX_SPINE_HEIGHT}
+                  onClick={(e) => { e.stopPropagation(); resizeDecor(1.1); }}
+                  className="w-8 h-8 rounded-full bg-white/90 border border-gray-200 shadow text-gray-700 text-lg leading-none disabled:opacity-40"
+                >
+                  +
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Shelf Board */}
+        <div className="relative h-6 w-full z-20">
         <div
           className="absolute inset-0 w-full h-full"
           style={{
-            backgroundImage: `url(${customShelfImage ?? defaultShelfImage ?? '/shelf-wood.jpg'})`,
+            backgroundImage: `url(${customShelfImage ?? defaultShelfImage ?? '/shelf-wood-seamless.jpg'})`,
             backgroundSize: 'auto 100%',
             backgroundRepeat: 'repeat-x',
             backgroundPosition: 'left center',
@@ -426,14 +582,20 @@ export function Shelf() {
             }}
           ></div>
         </div>
+        </div>
+
+        {/* Shadow under the shelf: inside the scroll area, so it moves with the board, edge bounce included */}
         <div
-          className="absolute left-0 right-0 h-16 pointer-events-none top-[calc(100%-4px)]"
+          className="absolute left-0 right-0 bottom-0 pointer-events-none"
           style={{
+            height: SHELF_SHADOW_ROOM + 4,
             background: 'linear-gradient(to bottom, rgba(0,0,0,0.45), rgba(0,0,0,0))',
             filter: 'blur(6px)',
           }}
         ></div>
+        </div>
       </div>
+
     </div>
   );
 }
